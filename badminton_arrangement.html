@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>羽球智慧排點系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f0f2f5;
+        }
+        /* 為點擊的球員卡片增加醒目提示 */
+        .selected-player-card {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.7); /* blue-500 */
+            border-color: #3b82f6; /* blue-500 */
+        }
+        /* 簡單的 modal 淡入動畫 */
+        .modal-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- 主容器 -->
+    <div id="app-container" class="p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto">
+
+        <!-- ===== 頁面 1: 名單匯入與報到 ===== -->
+        <div id="roster-view">
+            <header class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">羽球智慧排點系統</h1>
+                <p class="text-gray-500 mt-1">步驟 1: 完成球員報到</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左側：匯入與說明 -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-xl font-bold mb-3">新增臨時球員</h2>
+                    <p class="text-sm text-gray-600 mb-4">
+                        可隨時貼上臨時球員名單，他們會被**加入**到現有名單後方。<br>
+                        <span class="font-semibold text-blue-600">🔵</span>：男生、<span class="font-semibold text-pink-600">🔴</span>：女生<br>
+                        <span class="font-semibold text-green-600">_季</span>：季繳會員<br>
+                        <span class="font-semibold text-gray-500">系統會自動清理姓名中的編號與圖示。</span>
+                    </p>
+                    <textarea id="roster-input" class="w-full h-48 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="一行一位，例如：&#10;🔵 小明"></textarea>
+                    <button id="import-btn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
+                        新增球員
+                    </button>
+                    <div id="roster-stats" class="mt-4 text-sm text-gray-700 space-y-1">
+                        <!-- 名單統計資訊會顯示在這裡 -->
+                    </div>
+                </div>
+
+                <!-- 右側：報到區 -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">球員報到區</h2>
+                        <button id="go-to-scheduling-btn" class="bg-green-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-700 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100" disabled>
+                            前往排點 ▶
+                        </button>
+                    </div>
+                    <div id="check-in-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                        <!-- 球員報到卡片會顯示在這裡 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 頁面 2: 排場操作 ===== -->
+        <div id="scheduling-view" class="hidden">
+            <header class="mb-6">
+                <div class="flex flex-wrap justify-between items-center gap-4">
+                    <h1 class="text-3xl font-bold text-gray-800">排場操作面板</h1>
+                    <button id="back-to-roster-btn" class="bg-gray-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-gray-600 transition">
+                        ◀ 返回報到頁
+                    </button>
+                </div>
+                <!-- 統計數據 -->
+                <div id="checked-in-stats" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <!-- 報到統計資訊 -->
+                </div>
+            </header>
+
+            <!-- 球場控制 -->
+            <div class="flex flex-wrap gap-4 mb-6 items-center">
+                <h2 class="text-xl font-bold">球場管理</h2>
+                <button id="add-court-btn" class="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition text-sm font-semibold">+ 新增正式球場</button>
+                <button id="add-pre-court-btn" class="bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition text-sm font-semibold">+ 新增預排場地</button>
+            </div>
+
+            <!-- 球場區域 -->
+            <div id="courts-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+                <!-- 球場卡片會顯示在這裡 -->
+            </div>
+
+            <!-- 等候區 -->
+            <div>
+                <h2 class="text-xl font-bold mb-4">等候區</h2>
+                <div id="waiting-queue" class="p-4 bg-white rounded-xl shadow-md min-h-[150px]">
+                    <div id="waiting-queue-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                       <!-- 等候球員卡片會顯示在這裡 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== Modal: 編輯球員資訊 ===== -->
+    <div id="edit-player-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm modal-fade-in">
+            <h3 class="text-xl font-bold mb-5">編輯球員資訊</h3>
+            <input type="hidden" id="edit-player-id">
+            <div class="mb-4">
+                <label for="edit-player-name" class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+                <input type="text" id="edit-player-name" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">性別</label>
+                <div class="flex gap-x-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="edit-gender" value="male" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                        <span class="ml-2 text-gray-700">🔵 男</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="edit-gender" value="female" class="h-4 w-4 text-pink-600 border-gray-300 focus:ring-pink-500">
+                        <span class="ml-2 text-gray-700">🔴 女</span>
+                    </label>
+                </div>
+            </div>
+            <div class="mb-6">
+                <label for="edit-player-level" class="block text-sm font-medium text-gray-700 mb-1">等級 (1-10)</label>
+                <input type="number" id="edit-player-level" min="1" max="10" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-edit-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition">取消</button>
+                <button id="save-edit-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">儲存變更</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ========== STATE MANAGEMENT ==========
+        let players = [];
+        let courts = [];
+        let selectedPlayerIds = [];
+        let courtCounter = 0;
+
+        // ========== DOM ELEMENTS ==========
+        const rosterView = document.getElementById('roster-view');
+        const schedulingView = document.getElementById('scheduling-view');
+        const rosterInput = document.getElementById('roster-input');
+        const importBtn = document.getElementById('import-btn');
+        const rosterStats = document.getElementById('roster-stats');
+        const checkInList = document.getElementById('check-in-list');
+        const goToSchedulingBtn = document.getElementById('go-to-scheduling-btn');
+        const backToRosterBtn = document.getElementById('back-to-roster-btn');
+        const checkedInStats = document.getElementById('checked-in-stats');
+        const addCourtBtn = document.getElementById('add-court-btn');
+        const addPreCourtBtn = document.getElementById('add-pre-court-btn');
+        const courtsContainer = document.getElementById('courts-container');
+        const waitingQueueGrid = document.getElementById('waiting-queue-grid');
+        
+        // Modal elements
+        const modal = document.getElementById('edit-player-modal');
+        const editPlayerIdInput = document.getElementById('edit-player-id');
+        const editPlayerNameInput = document.getElementById('edit-player-name');
+        const editPlayerLevelInput = document.getElementById('edit-player-level');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+
+        // ========== INITIALIZATION ==========
+        function initialize() {
+            loadPredefinedPlayers(); // **NEW**: Load built-in players
+            addCourt('normal');
+            addCourt('normal');
+            bindEventListeners();
+            setInterval(updateWaitingTimers, 1000);
+            renderAllOnLoad(); // **NEW**: Render the initial state
+        }
+
+        // ========== EVENT LISTENERS ==========
+        function bindEventListeners() {
+            importBtn.addEventListener('click', handleImport);
+            goToSchedulingBtn.addEventListener('click', showSchedulingView);
+            backToRosterBtn.addEventListener('click', showRosterView);
+            addCourtBtn.addEventListener('click', () => addCourt('normal'));
+            addPreCourtBtn.addEventListener('click', () => addCourt('pre-schedule'));
+            
+            saveEditBtn.addEventListener('click', handleSavePlayerEdit);
+            cancelEditBtn.addEventListener('click', closeEditModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeEditModal();
+            });
+        }
+
+        // ========== CORE LOGIC ==========
+        
+        /**
+         * **NEW**: Loads the predefined list of committee members.
+         */
+        function loadPredefinedPlayers() {
+            const predefinedData = [
+                { name: '⏺️仕庭', gender: 'male' },
+                { name: '⏺️武庫', gender: 'male' },
+                { name: '⏺️筑軒', gender: 'female' },
+                { name: '⏺️鹹鹹', gender: 'female' },
+                { name: '⏺️R薰', gender: 'male' },
+                { name: '⏺️簡峰', gender: 'male' },
+                { name: '⏺️達達', gender: 'male' },
+            ];
+
+            players = predefinedData.map((p, index) => ({
+                id: `p_predefined_${index}`,
+                name: p.name,
+                gender: p.gender,
+                isSeasonal: false,
+                level: 5,
+                status: 'not-checked-in',
+                timeOffCourt: null,
+            }));
+        }
+
+        function handleImport() {
+            const text = rosterInput.value.trim();
+            if (!text) return;
+
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            
+            const newPlayers = lines.map((line, index) => {
+                let gender = 'male';
+                let isSeasonal = false;
+                
+                let cleanedName = line.replace(/\u00A0/g, ' ').trim();
+
+                if (cleanedName.includes('🔴')) {
+                    gender = 'female';
+                } else if (cleanedName.includes('🔵')) {
+                    gender = 'male';
+                }
+
+                if (cleanedName.includes('_季')) {
+                    isSeasonal = true;
+                    cleanedName = cleanedName.replace(/_季/g, '');
+                }
+
+                cleanedName = cleanedName.replace(/[🔵🔴]/g, '');
+                cleanedName = cleanedName.replace(/^\d+\.\s*/, '');
+                
+                const finalName = cleanedName.trim();
+
+                return {
+                    id: `p${Date.now()}${index}`,
+                    name: finalName,
+                    gender: gender,
+                    isSeasonal: isSeasonal,
+                    level: 5,
+                    status: 'not-checked-in',
+                    timeOffCourt: null,
+                };
+            });
+
+            players = players.concat(newPlayers);
+            rosterInput.value = '';
+            renderRosterList();
+            updateRosterStats();
+            goToSchedulingBtn.disabled = true;
+        }
+
+        function toggleCheckIn(playerId) {
+            const player = players.find(p => p.id === playerId);
+            if (player) {
+                player.status = player.status === 'checked-in' ? 'not-checked-in' : 'checked-in';
+                if(player.status === 'checked-in') {
+                    player.timeOffCourt = Date.now();
+                } else {
+                    player.timeOffCourt = null;
+                }
+            }
+            renderRosterList();
+            const checkedInCount = players.filter(p => p.status === 'checked-in').length;
+            goToSchedulingBtn.disabled = checkedInCount === 0;
+        }
+
+        function addCourt(type) {
+            courtCounter++;
+            const newCourt = {
+                id: `c${Date.now()}`,
+                name: type === 'normal' ? `正式球場 ${courtCounter}` : `預排場地 ${String.fromCharCode(64 + courts.filter(c=>c.type === 'pre-schedule').length + 1)}`,
+                type: type,
+                players: [null, null, null, null]
+            };
+            courts.push(newCourt);
+            renderAll();
+        }
+        
+        function deleteCourt(courtId) {
+            const courtIndex = courts.findIndex(c => c.id === courtId);
+            if (courtIndex > -1) {
+                courts[courtIndex].players.forEach(playerId => {
+                    if (playerId) movePlayerToWaiting(playerId, courtId);
+                });
+                courts.splice(courtIndex, 1);
+                renderAll();
+            }
+        }
+
+        function movePlayerToWaiting(playerId, courtId) {
+            const court = courts.find(c => c.id === courtId);
+            const player = players.find(p => p.id === playerId);
+            if (court && player) {
+                const playerIndex = court.players.indexOf(playerId);
+                if (playerIndex > -1) {
+                    court.players[playerIndex] = null;
+                    selectedPlayerIds = [];
+                    renderAll();
+                }
+            }
+        }
+        
+        function movePlayerToCourt(courtId, slotIndex) {
+            if (selectedPlayerIds.length !== 1) return;
+            const playerIdToMove = selectedPlayerIds[0];
+
+            const court = courts.find(c => c.id === courtId);
+            if (court && court.players[slotIndex] === null) {
+                courts.forEach(c => {
+                    const idx = c.players.indexOf(playerIdToMove);
+                    if (idx > -1) c.players[idx] = null;
+                });
+                
+                court.players[slotIndex] = playerIdToMove;
+                
+                selectedPlayerIds = [];
+                renderAll();
+            }
+        }
+
+        function assignGroupToCourt(courtId) {
+            if (selectedPlayerIds.length !== 4) return;
+
+            const court = courts.find(c => c.id === courtId);
+            const isCourtEmpty = court.players.every(p => p === null);
+
+            if (court && isCourtEmpty) {
+                court.players = [...selectedPlayerIds];
+                selectedPlayerIds = [];
+                renderAll();
+            }
+        }
+        
+        function selectWaitingPlayer(playerId) {
+            const index = selectedPlayerIds.indexOf(playerId);
+            if (index > -1) {
+                selectedPlayerIds.splice(index, 1);
+            } else {
+                if (selectedPlayerIds.length < 4) {
+                    selectedPlayerIds.push(playerId);
+                }
+            }
+            renderAll();
+        }
+
+        function endMatch(courtId) {
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return;
+
+            court.players.forEach((playerId, index) => {
+                if (playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if (player) {
+                        player.timeOffCourt = Date.now();
+                    }
+                    court.players[index] = null;
+                }
+            });
+            selectedPlayerIds = [];
+            renderAll();
+        }
+
+        function clearCourt(courtId) {
+            endMatch(courtId);
+        }
+        
+        function updateCourtName(courtId, newName) {
+            const court = courts.find(c => c.id === courtId);
+            if (court) {
+                court.name = newName;
+            }
+        }
+
+        // ========== MODAL LOGIC ==========
+        function openEditModal(playerId) {
+            const player = players.find(p => p.id === playerId);
+            if (player) {
+                editPlayerIdInput.value = player.id;
+                editPlayerNameInput.value = player.name;
+                editPlayerLevelInput.value = player.level;
+                document.querySelector(`input[name="edit-gender"][value="${player.gender}"]`).checked = true;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeEditModal() {
+            modal.classList.add('hidden');
+        }
+
+        function handleSavePlayerEdit() {
+            const playerId = editPlayerIdInput.value;
+            const player = players.find(p => p.id === playerId);
+            if (player) {
+                player.name = editPlayerNameInput.value.trim();
+                player.level = parseInt(editPlayerLevelInput.value, 10) || 5;
+                player.gender = document.querySelector('input[name="edit-gender"]:checked').value;
+            }
+            closeEditModal();
+            if (!rosterView.classList.contains('hidden')) {
+                renderRosterList();
+            } else {
+                renderAll();
+            }
+        }
+
+        // ========== VIEW TOGGLING & RENDERING ==========
+        
+        /**
+         * **NEW**: Renders the initial state on page load.
+         */
+        function renderAllOnLoad() {
+            renderRosterList();
+            updateRosterStats();
+        }
+
+        function showSchedulingView() {
+            rosterView.classList.add('hidden');
+            schedulingView.classList.remove('hidden');
+            renderAll();
+        }
+
+        function showRosterView() {
+            schedulingView.classList.add('hidden');
+            rosterView.classList.remove('hidden');
+            selectedPlayerIds = [];
+            renderRosterList();
+        }
+        
+        function renderAll() {
+            renderCourts();
+            renderWaitingQueue();
+            updateCheckedInStats();
+        }
+
+        function renderRosterList() {
+            checkInList.innerHTML = '';
+            if (players.length === 0) {
+                checkInList.innerHTML = '<p class="col-span-full text-center text-gray-500 py-10">請先從左側匯入名單...</p>';
+                return;
+            }
+            players.forEach(player => {
+                const isCheckedIn = player.status === 'checked-in';
+                const cardBg = isCheckedIn ? 'bg-green-100 border-green-400' : 'bg-white border-gray-200';
+                const buttonBg = isCheckedIn ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600';
+                const buttonText = isCheckedIn ? '取消報到' : '報到';
+
+                const playerCard = document.createElement('div');
+                playerCard.className = `p-3 rounded-lg border ${cardBg} transition shadow-sm flex flex-col`;
+                
+                playerCard.innerHTML = `
+                    <div class="flex-grow">
+                        <div class="font-bold text-lg cursor-pointer" onclick="app.openEditModal('${player.id}')">${player.name}</div>
+                        <div class="text-sm text-gray-600 mt-1 flex items-center">
+                            <span class="cursor-pointer text-lg" onclick="app.openEditModal('${player.id}')">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                            <span class="mx-2 text-gray-300">|</span>
+                            <span class="cursor-pointer" onclick="app.openEditModal('${player.id}')">
+                                等級 ${player.level}
+                            </span>
+                             ${player.isSeasonal ? '<span class="ml-auto text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}
+                        </div>
+                    </div>
+                    <button class="w-full mt-3 text-white text-sm font-bold py-1 rounded-md ${buttonBg} transition" onclick="app.toggleCheckIn('${player.id}')">
+                        ${buttonText}
+                    </button>
+                `;
+                checkInList.appendChild(playerCard);
+            });
+        }
+
+        function renderCourts() {
+            courtsContainer.innerHTML = '';
+            courts.forEach(court => {
+                const courtBg = court.type === 'pre-schedule' ? 'bg-indigo-50' : 'bg-white';
+                const courtBorder = court.type === 'pre-schedule' ? 'border-indigo-200' : 'border-gray-200';
+                
+                const courtEl = document.createElement('div');
+                courtEl.className = `p-4 rounded-xl shadow-md border ${courtBg} ${courtBorder}`;
+                
+                const isCourtEmpty = court.players.every(p => p === null);
+                const canAssignGroup = selectedPlayerIds.length === 4 && isCourtEmpty;
+
+                const playersGrid = court.players.map((playerId, index) => {
+                    if (playerId) {
+                        const player = players.find(p => p.id === playerId);
+                        return `
+                            <div class="p-3 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
+                                <div class="font-bold cursor-pointer" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">${player.name}</div>
+                                <div class="text-sm text-gray-600 mt-1 flex items-center">
+                                    <span class="cursor-pointer text-lg" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                                    <span class="mx-2 text-gray-300">|</span>
+                                    <span class="cursor-pointer" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">
+                                        等級 ${player.level} ${player.isSeasonal ? '(季)' : ''}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div class="flex items-center justify-center p-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 cursor-pointer hover:bg-green-50 hover:border-green-400 transition" onclick="app.movePlayerToCourt('${court.id}', ${index})">
+                                + 加入球員
+                            </div>
+                        `;
+                    }
+                }).join('');
+
+                const isNormalCourt = court.type === 'normal';
+                const clearButtonText = isNormalCourt ? '對戰結束' : '清空';
+                const clearButtonAction = isNormalCourt ? 'endMatch' : 'clearCourt';
+
+                courtEl.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <input type="text" value="${court.name}" onchange="app.updateCourtName('${court.id}', this.value)" class="text-lg font-bold bg-transparent focus:bg-white rounded px-2 py-1 w-2/3">
+                        <div>
+                            <button class="text-xs bg-yellow-500 text-white py-1 px-2 rounded hover:bg-yellow-600" onclick="app.${clearButtonAction}('${court.id}')">${clearButtonText}</button>
+                            <button class="text-xs bg-red-500 text-white py-1 px-2 rounded hover:bg-red-600 ml-1" onclick="app.deleteCourt('${court.id}')">刪除</button>
+                        </div>
+                    </div>
+                    ${canAssignGroup ? `<button class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition mb-3" onclick="app.assignGroupToCourt('${court.id}')">安排此 4 人上場</button>` : ''}
+                    <div class="grid grid-cols-2 gap-3">
+                        ${playersGrid}
+                    </div>
+                `;
+                courtsContainer.appendChild(courtEl);
+            });
+        }
+
+        function renderWaitingQueue() {
+            waitingQueueGrid.innerHTML = '';
+            const playersOnCourtIds = courts.flatMap(c => c.players).filter(p => p !== null);
+            
+            const waitingPlayers = players
+                .filter(p => p.status === 'checked-in')
+                .sort((a, b) => (a.timeOffCourt || Infinity) - (b.timeOffCourt || Infinity));
+
+            if (waitingPlayers.length === 0) {
+                waitingQueueGrid.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">目前沒有人在等候</p>';
+                return;
+            }
+
+            waitingPlayers.forEach(player => {
+                if (playersOnCourtIds.includes(player.id)) return;
+
+                const isSelected = selectedPlayerIds.includes(player.id);
+                const cardClasses = isSelected ? 'selected-player-card border-2 border-blue-500' : 'border border-gray-200';
+                
+                const playerCard = document.createElement('div');
+                playerCard.className = `p-3 rounded-lg bg-white cursor-pointer shadow-sm transition-transform transform hover:scale-105 ${cardClasses}`;
+                playerCard.onclick = () => selectWaitingPlayer(player.id);
+                
+                playerCard.innerHTML = `
+                    <div class="font-bold cursor-pointer" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">${player.name}</div>
+                    <div class="text-sm text-gray-600 mt-1 flex items-center">
+                        <span class="cursor-pointer text-lg" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                        <span class="mx-2 text-gray-300">|</span>
+                        <span class="cursor-pointer" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">
+                            等級 ${player.level} ${player.isSeasonal ? '<span class="text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}
+                        </span>
+                    </div>
+                    <div id="timer-${player.id}" class="text-xs text-orange-600 font-semibold mt-1 h-4"></div>
+                `;
+                waitingQueueGrid.appendChild(playerCard);
+            });
+            updateWaitingTimers();
+        }
+        
+        // ========== STATS & TIMERS ==========
+        
+        function updateWaitingTimers() {
+            const playersOnCourtIds = courts.flatMap(c => c.players).filter(p => p !== null);
+            const waitingPlayers = players.filter(p => p.status === 'checked-in' && !playersOnCourtIds.includes(p.id));
+
+            waitingPlayers.forEach(player => {
+                const timerEl = document.getElementById(`timer-${player.id}`);
+                if (timerEl && player.timeOffCourt) {
+                    const elapsedSeconds = Math.floor((Date.now() - player.timeOffCourt) / 1000);
+                    const minutes = Math.floor(elapsedSeconds / 60);
+                    const seconds = elapsedSeconds % 60;
+                    timerEl.textContent = `等待: ${minutes}分 ${String(seconds).padStart(2, '0')}秒`;
+                } else if (timerEl) {
+                    timerEl.textContent = '';
+                }
+            });
+        }
+
+        function updateRosterStats() {
+            const maleCount = players.filter(p => p.gender === 'male').length;
+            const femaleCount = players.filter(p => p.gender === 'female').length;
+            const seasonalCount = players.filter(p => p.isSeasonal).length;
+            rosterStats.innerHTML = `
+                <p>總人數: <span class="font-bold">${players.length}</span> 人</p>
+                <p>男: <span class="font-bold text-blue-600">${maleCount}</span> 人 / 女: <span class="font-bold text-pink-600">${femaleCount}</span> 人</p>
+                <p>季繳: <span class="font-bold text-green-600">${seasonalCount}</span> 人</p>
+            `;
+        }
+
+        function updateCheckedInStats() {
+            const checkedInPlayers = players.filter(p => p.status === 'checked-in');
+            const maleCount = checkedInPlayers.filter(p => p.gender === 'male').length;
+            const femaleCount = checkedInPlayers.filter(p => p.gender === 'female').length;
+            const playersOnCourtCount = courts.flatMap(c => c.players).filter(p => p !== null).length;
+            const waitingCount = checkedInPlayers.length - playersOnCourtCount;
+
+            checkedInStats.innerHTML = `
+                <div class="bg-white p-3 rounded-lg shadow-sm"><div class="text-gray-500 text-sm">報到總數</div><div class="text-2xl font-bold">${checkedInPlayers.length}</div></div>
+                <div class="bg-white p-3 rounded-lg shadow-sm"><div class="text-gray-500 text-sm">男 / 女</div><div class="text-2xl font-bold"><span class="text-blue-600">${maleCount}</span> / <span class="text-pink-600">${femaleCount}</span></div></div>
+                <div class="bg-white p-3 rounded-lg shadow-sm"><div class="text-gray-500 text-sm">場上人數</div><div class="text-2xl font-bold text-green-600">${playersOnCourtCount}</div></div>
+                <div class="bg-white p-3 rounded-lg shadow-sm"><div class="text-gray-500 text-sm">等候人數</div><div class="text-2xl font-bold text-orange-600">${waitingCount}</div></div>
+            `;
+        }
+
+        // Expose functions to be called from HTML onclick attributes
+        window.app = {
+            toggleCheckIn,
+            openEditModal,
+            movePlayerToWaiting,
+            movePlayerToCourt,
+            selectWaitingPlayer,
+            deleteCourt,
+            clearCourt,
+            updateCourtName,
+            assignGroupToCourt,
+            endMatch
+        };
+
+        initialize();
+    });
+    </script>
+</body>
+</html>
+
