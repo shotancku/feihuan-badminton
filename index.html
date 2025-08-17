@@ -305,7 +305,7 @@
             const preScheduleCourtCount = courts.filter(c => c.type === 'pre-schedule').length;
             const newCourt = {
                 id: `c${Date.now()}`,
-                name: type === 'normal' ? `正式球場 ${normalCourtCount + 1}` : `預排場地 ${String.fromCharCode(65 + preScheduleCourtCount)}`,
+                name: type === 'normal' ? ` ${normalCourtCount + 1}號場地` : `場地 ${String.fromCharCode(65 + preScheduleCourtCount)}`,
                 type: type,
                 players: [null, null, null, null]
             };
