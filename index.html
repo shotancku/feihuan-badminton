@@ -105,7 +105,7 @@
                 <!-- 正式球場 -->
                 <div>
                     <h3 class="text-xl font-bold mb-4 text-gray-700 border-b-2 border-gray-300 pb-2">正式球場</h3>
-                    <div id="formal-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+                    <div id="formal-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-5">
                         <!-- 正式球場卡片會顯示在這裡 -->
                     </div>
                 </div>
@@ -113,7 +113,7 @@
                 <!-- 預排場地 -->
                 <div>
                     <h3 class="text-xl font-bold mb-4 text-gray-700 border-b-2 border-gray-300 pb-2">預排場地</h3>
-                    <div id="pre-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+                    <div id="pre-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-5">
                         <!-- 預排場地卡片會顯示在這裡 -->
                     </div>
                 </div>
@@ -239,7 +239,7 @@
                 { name: '⏺️達達', gender: 'male' },
             ];
             players = predefinedData.map((p, index) => ({
-                id: `p_predefined_${index}`, name: p.name, gender: p.gender, isSeasonal: false, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null,
+                id: `p_predefined_${index}`, name: p.name, gender: p.gender, isSeasonal: false, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null, gamesPlayed: 0,
             }));
         }
 
@@ -265,7 +265,7 @@
                 const comparableName = finalName.replace(/^⏺️/, '').trim();
                 if (comparableName && !existingNames.has(comparableName)) {
                     newPlayers.push({
-                        id: `p${Date.now()}${index}`, name: finalName, gender, isSeasonal, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null,
+                        id: `p${Date.now()}${index}`, name: finalName, gender, isSeasonal, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null, gamesPlayed: 0,
                     });
                     existingNames.add(comparableName);
                 }
@@ -300,7 +300,6 @@
             goToSchedulingBtn.disabled = checkedInCount === 0;
         }
 
-        // --- MODIFIED: Changed court naming convention ---
         function addCourt(type) {
             const normalCourtCount = courts.filter(c => c.type === 'normal').length;
             const preScheduleCourtCount = courts.filter(c => c.type === 'pre-schedule').length;
@@ -314,7 +313,6 @@
             renderAll();
         }
         
-        // --- MODIFIED: Changed court re-naming convention ---
         function deleteCourt(courtId) {
             const courtIndex = courts.findIndex(c => c.id === courtId);
             if (courtIndex > -1) {
@@ -423,6 +421,7 @@
                     if (player) {
                         player.timeOffCourt = Date.now();
                         player.lastGameTag = team1Tag;
+                        player.gamesPlayed++;
                     }
                 }
             });
@@ -433,6 +432,7 @@
                     if (player) {
                         player.timeOffCourt = Date.now();
                         player.lastGameTag = team2Tag;
+                        player.gamesPlayed++;
                     }
                 }
             });
@@ -489,6 +489,7 @@
                     if (player) {
                         player.timeOffCourt = Date.now();
                         player.lastGameTag = team1Tag;
+                        player.gamesPlayed++;
                     }
                 }
             });
@@ -498,6 +499,7 @@
                     if (player) {
                         player.timeOffCourt = Date.now();
                         player.lastGameTag = team2Tag;
+                        player.gamesPlayed++;
                     }
                 }
             });
@@ -599,7 +601,7 @@
                         <div class="text-sm text-gray-600 mt-1 flex items-center">
                             <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                             <span class="mx-2 text-gray-300">|</span>
-                            <span>等級 ${player.level}</span>
+                            <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
                              ${player.isSeasonal ? '<span class="ml-auto text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}
                         </div>
                     </div>
@@ -667,7 +669,7 @@
                                 <div class="text-sm text-gray-600 mt-1 flex items-center">
                                     <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                                     <span class="mx-2 text-gray-300">|</span>
-                                    <span>等級 ${player.level} ${player.isSeasonal ? '(季)' : ''}</span>
+                                    <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
                                 </div>
                                 ${timerHTML}
                             </div>
@@ -742,7 +744,7 @@
                     <div class="text-sm text-gray-600 mt-1 flex items-center">
                         <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                         <span class="mx-2 text-gray-300">|</span>
-                        <span>等級 ${player.level} ${player.isSeasonal ? '<span class="text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}</span>
+                        <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
                     </div>
                     <div id="timer-${player.id}" class="text-xs text-orange-600 font-semibold mt-1 h-4"></div>
                 `;
@@ -828,4 +830,3 @@
     </script>
 </body>
 </html>
-
