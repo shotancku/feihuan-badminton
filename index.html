@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>羽球智慧排點系統</title>
+    <title>飛煥羽球隊排點系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -25,6 +25,11 @@
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
+        /* 升格模式下的目標場地醒目提示 */
+        .promotion-target {
+            outline: 2px dashed #f59e0b; /* amber-500 */
+            outline-offset: 4px;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -35,7 +40,7 @@
         <!-- ===== 頁面 1: 名單匯入與報到 ===== -->
         <div id="roster-view">
             <header class="mb-6">
-                <h1 class="text-3xl font-bold text-gray-800">羽球智慧排點系統</h1>
+                <h1 class="text-3xl font-bold text-gray-800">飛煥羽球隊排點系統</h1>
                 <p class="text-gray-500 mt-1">步驟 1: 完成球員報到</p>
             </header>
 
@@ -44,10 +49,9 @@
                 <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md">
                     <h2 class="text-xl font-bold mb-3">新增臨時球員</h2>
                     <p class="text-sm text-gray-600 mb-4">
-                        可隨時貼上臨時球員名單，他們會被**加入**到現有名單後方。<br>
+                        可隨時貼上臨打名單，他們會被**加入**到現有名單後方 (重複名字會被過濾)。<br>
                         <span class="font-semibold text-blue-600">🔵</span>：男生、<span class="font-semibold text-pink-600">🔴</span>：女生<br>
                         <span class="font-semibold text-green-600">_季</span>：季繳會員<br>
-                        <span class="font-semibold text-gray-500">系統會自動清理姓名中的編號與圖示。</span>
                     </p>
                     <textarea id="roster-input" class="w-full h-48 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="一行一位，例如：&#10;🔵 小明"></textarea>
                     <button id="import-btn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
@@ -66,7 +70,7 @@
                             前往排點 ▶
                         </button>
                     </div>
-                    <div id="check-in-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                    <div id="check-in-list" class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto p-2 bg-gray-50 rounded-lg">
                         <!-- 球員報到卡片會顯示在這裡 -->
                     </div>
                 </div>
@@ -93,12 +97,28 @@
                 <h2 class="text-xl font-bold">球場管理</h2>
                 <button id="add-court-btn" class="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition text-sm font-semibold">+ 新增正式球場</button>
                 <button id="add-pre-court-btn" class="bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition text-sm font-semibold">+ 新增預排場地</button>
+                <button id="cancel-promotion-btn" class="hidden bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition text-sm font-semibold">取消升格</button>
             </div>
 
             <!-- 球場區域 -->
-            <div id="courts-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
-                <!-- 球場卡片會顯示在這裡 -->
+            <div class="space-y-8 mb-8">
+                <!-- 正式球場 -->
+                <div>
+                    <h3 class="text-xl font-bold mb-4 text-gray-700 border-b-2 border-gray-300 pb-2">正式球場</h3>
+                    <div id="formal-courts-container" class="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+                        <!-- 正式球場卡片會顯示在這裡 -->
+                    </div>
+                </div>
+
+                <!-- 預排場地 -->
+                <div>
+                    <h3 class="text-xl font-bold mb-4 text-gray-700 border-b-2 border-gray-300 pb-2">預排場地</h3>
+                    <div id="pre-courts-container" class="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+                        <!-- 預排場地卡片會顯示在這裡 -->
+                    </div>
+                </div>
             </div>
+
 
             <!-- 等候區 -->
             <div>
@@ -153,7 +173,8 @@
         let players = [];
         let courts = [];
         let selectedPlayerIds = [];
-        let courtCounter = 0;
+        let promotionSourceCourtId = null;
+        let lastGameTagCounter = 0;
 
         // ========== DOM ELEMENTS ==========
         const rosterView = document.getElementById('roster-view');
@@ -167,10 +188,11 @@
         const checkedInStats = document.getElementById('checked-in-stats');
         const addCourtBtn = document.getElementById('add-court-btn');
         const addPreCourtBtn = document.getElementById('add-pre-court-btn');
-        const courtsContainer = document.getElementById('courts-container');
+        const formalCourtsContainer = document.getElementById('formal-courts-container');
+        const preCourtsContainer = document.getElementById('pre-courts-container');
         const waitingQueueGrid = document.getElementById('waiting-queue-grid');
+        const cancelPromotionBtn = document.getElementById('cancel-promotion-btn');
         
-        // Modal elements
         const modal = document.getElementById('edit-player-modal');
         const editPlayerIdInput = document.getElementById('edit-player-id');
         const editPlayerNameInput = document.getElementById('edit-player-name');
@@ -180,12 +202,12 @@
 
         // ========== INITIALIZATION ==========
         function initialize() {
-            loadPredefinedPlayers(); // **NEW**: Load built-in players
+            loadPredefinedPlayers();
             addCourt('normal');
             addCourt('normal');
             bindEventListeners();
             setInterval(updateWaitingTimers, 1000);
-            renderAllOnLoad(); // **NEW**: Render the initial state
+            renderAllOnLoad();
         }
 
         // ========== EVENT LISTENERS ==========
@@ -195,6 +217,7 @@
             backToRosterBtn.addEventListener('click', showRosterView);
             addCourtBtn.addEventListener('click', () => addCourt('normal'));
             addPreCourtBtn.addEventListener('click', () => addCourt('pre-schedule'));
+            cancelPromotionBtn.addEventListener('click', cancelPromotion);
             
             saveEditBtn.addEventListener('click', handleSavePlayerEdit);
             cancelEditBtn.addEventListener('click', closeEditModal);
@@ -205,9 +228,6 @@
 
         // ========== CORE LOGIC ==========
         
-        /**
-         * **NEW**: Loads the predefined list of committee members.
-         */
         function loadPredefinedPlayers() {
             const predefinedData = [
                 { name: '⏺️仕庭', gender: 'male' },
@@ -218,73 +238,62 @@
                 { name: '⏺️簡峰', gender: 'male' },
                 { name: '⏺️達達', gender: 'male' },
             ];
-
             players = predefinedData.map((p, index) => ({
-                id: `p_predefined_${index}`,
-                name: p.name,
-                gender: p.gender,
-                isSeasonal: false,
-                level: 5,
-                status: 'not-checked-in',
-                timeOffCourt: null,
+                id: `p_predefined_${index}`, name: p.name, gender: p.gender, isSeasonal: false, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null,
             }));
         }
 
         function handleImport() {
             const text = rosterInput.value.trim();
             if (!text) return;
-
             const lines = text.split('\n').filter(line => line.trim() !== '');
-            
-            const newPlayers = lines.map((line, index) => {
+            const existingNames = new Set(players.map(p => p.name.replace(/^⏺️/, '').trim()));
+            const newPlayers = [];
+            lines.forEach((line, index) => {
                 let gender = 'male';
                 let isSeasonal = false;
-                
                 let cleanedName = line.replace(/\u00A0/g, ' ').trim();
-
-                if (cleanedName.includes('🔴')) {
-                    gender = 'female';
-                } else if (cleanedName.includes('🔵')) {
-                    gender = 'male';
-                }
-
+                if (cleanedName.includes('🔴')) gender = 'female';
+                else if (cleanedName.includes('🔵')) gender = 'male';
                 if (cleanedName.includes('_季')) {
                     isSeasonal = true;
                     cleanedName = cleanedName.replace(/_季/g, '');
                 }
-
                 cleanedName = cleanedName.replace(/[🔵🔴]/g, '');
                 cleanedName = cleanedName.replace(/^\d+\.\s*/, '');
-                
                 const finalName = cleanedName.trim();
-
-                return {
-                    id: `p${Date.now()}${index}`,
-                    name: finalName,
-                    gender: gender,
-                    isSeasonal: isSeasonal,
-                    level: 5,
-                    status: 'not-checked-in',
-                    timeOffCourt: null,
-                };
+                const comparableName = finalName.replace(/^⏺️/, '').trim();
+                if (comparableName && !existingNames.has(comparableName)) {
+                    newPlayers.push({
+                        id: `p${Date.now()}${index}`, name: finalName, gender, isSeasonal, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null,
+                    });
+                    existingNames.add(comparableName);
+                }
             });
-
             players = players.concat(newPlayers);
             rosterInput.value = '';
             renderRosterList();
             updateRosterStats();
-            goToSchedulingBtn.disabled = true;
+        }
+
+        function deletePlayer(playerId) {
+            const playerIndex = players.findIndex(p => p.id === playerId);
+            if (playerIndex > -1) {
+                players.splice(playerIndex, 1);
+                courts.forEach(court => {
+                    const onCourtIndex = court.players.indexOf(playerId);
+                    if (onCourtIndex > -1) court.players[onCourtIndex] = null;
+                });
+                renderRosterList();
+                updateRosterStats();
+            }
         }
 
         function toggleCheckIn(playerId) {
             const player = players.find(p => p.id === playerId);
             if (player) {
                 player.status = player.status === 'checked-in' ? 'not-checked-in' : 'checked-in';
-                if(player.status === 'checked-in') {
-                    player.timeOffCourt = Date.now();
-                } else {
-                    player.timeOffCourt = null;
-                }
+                player.timeOffCourt = player.status === 'checked-in' ? Date.now() : null;
             }
             renderRosterList();
             const checkedInCount = players.filter(p => p.status === 'checked-in').length;
@@ -292,10 +301,11 @@
         }
 
         function addCourt(type) {
-            courtCounter++;
+            const normalCourtCount = courts.filter(c => c.type === 'normal').length;
+            const preScheduleCourtCount = courts.filter(c => c.type === 'pre-schedule').length;
             const newCourt = {
                 id: `c${Date.now()}`,
-                name: type === 'normal' ? `正式球場 ${courtCounter}` : `預排場地 ${String.fromCharCode(64 + courts.filter(c=>c.type === 'pre-schedule').length + 1)}`,
+                name: type === 'normal' ? `正式球場 ${normalCourtCount + 1}` : `預排場地 ${String.fromCharCode(65 + preScheduleCourtCount)}`,
                 type: type,
                 players: [null, null, null, null]
             };
@@ -307,17 +317,27 @@
             const courtIndex = courts.findIndex(c => c.id === courtId);
             if (courtIndex > -1) {
                 courts[courtIndex].players.forEach(playerId => {
-                    if (playerId) movePlayerToWaiting(playerId, courtId);
+                    if (playerId) {
+                        const player = players.find(p => p.id === playerId);
+                    }
                 });
                 courts.splice(courtIndex, 1);
+                let normalCounter = 1;
+                let preScheduleCounter = 0;
+                courts.forEach(c => {
+                    if (c.type === 'normal') {
+                        c.name = `正式球場 ${normalCounter++}`;
+                    } else {
+                        c.name = `預排場地 ${String.fromCharCode(65 + preScheduleCounter++)}`;
+                    }
+                });
                 renderAll();
             }
         }
 
         function movePlayerToWaiting(playerId, courtId) {
             const court = courts.find(c => c.id === courtId);
-            const player = players.find(p => p.id === playerId);
-            if (court && player) {
+            if (court) {
                 const playerIndex = court.players.indexOf(playerId);
                 if (playerIndex > -1) {
                     court.players[playerIndex] = null;
@@ -330,9 +350,10 @@
         function movePlayerToCourt(courtId, slotIndex) {
             if (selectedPlayerIds.length !== 1) return;
             const playerIdToMove = selectedPlayerIds[0];
-
+            const playerToMove = players.find(p => p.id === playerIdToMove);
             const court = courts.find(c => c.id === courtId);
-            if (court && court.players[slotIndex] === null) {
+
+            if (playerToMove && court && court.players[slotIndex] === null) {
                 courts.forEach(c => {
                     const idx = c.players.indexOf(playerIdToMove);
                     if (idx > -1) c.players[idx] = null;
@@ -340,19 +361,38 @@
                 
                 court.players[slotIndex] = playerIdToMove;
                 
+                if (court.type === 'normal') {
+                    playerToMove.lastGameTag = null;
+                }
+
                 selectedPlayerIds = [];
                 renderAll();
             }
         }
 
         function assignGroupToCourt(courtId) {
-            if (selectedPlayerIds.length !== 4) return;
+            if (selectedPlayerIds.length === 0) return;
 
             const court = courts.find(c => c.id === courtId);
-            const isCourtEmpty = court.players.every(p => p === null);
+            if (!court) return;
 
-            if (court && isCourtEmpty) {
-                court.players = [...selectedPlayerIds];
+            const emptySlots = court.players.reduce((count, p) => count + (p === null ? 1 : 0), 0);
+
+            if (selectedPlayerIds.length <= emptySlots) {
+                const playersToAssign = [...selectedPlayerIds];
+
+                for (let i = 0; i < court.players.length && playersToAssign.length > 0; i++) {
+                    if (court.players[i] === null) {
+                        const playerId = playersToAssign.shift();
+                        court.players[i] = playerId;
+                        
+                        if (court.type === 'normal') {
+                            const player = players.find(p => p.id === playerId);
+                            if (player) player.lastGameTag = null;
+                        }
+                    }
+                }
+                
                 selectedPlayerIds = [];
                 renderAll();
             }
@@ -362,10 +402,8 @@
             const index = selectedPlayerIds.indexOf(playerId);
             if (index > -1) {
                 selectedPlayerIds.splice(index, 1);
-            } else {
-                if (selectedPlayerIds.length < 4) {
-                    selectedPlayerIds.push(playerId);
-                }
+            } else if (selectedPlayerIds.length < 4) {
+                selectedPlayerIds.push(playerId);
             }
             renderAll();
         }
@@ -374,28 +412,105 @@
             const court = courts.find(c => c.id === courtId);
             if (!court) return;
 
-            court.players.forEach((playerId, index) => {
+            const team1Tag = lastGameTagCounter++;
+            const team2Tag = lastGameTagCounter++;
+
+            [court.players[0], court.players[1]].forEach(playerId => {
                 if (playerId) {
                     const player = players.find(p => p.id === playerId);
                     if (player) {
                         player.timeOffCourt = Date.now();
+                        player.lastGameTag = team1Tag;
                     }
+                }
+            });
+
+            [court.players[2], court.players[3]].forEach(playerId => {
+                if (playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if (player) {
+                        player.timeOffCourt = Date.now();
+                        player.lastGameTag = team2Tag;
+                    }
+                }
+            });
+
+            court.players = [null, null, null, null];
+            selectedPlayerIds = [];
+            renderAll();
+        }
+
+        function clearCourt(courtId) {
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return;
+            court.players.forEach((playerId, index) => {
+                if (playerId) {
                     court.players[index] = null;
                 }
             });
             selectedPlayerIds = [];
             renderAll();
         }
-
-        function clearCourt(courtId) {
-            endMatch(courtId);
-        }
         
         function updateCourtName(courtId, newName) {
             const court = courts.find(c => c.id === courtId);
-            if (court) {
-                court.name = newName;
+            if (court) court.name = newName;
+        }
+
+        // ========== PROMOTION LOGIC ==========
+        function startPromotion(courtId) {
+            promotionSourceCourtId = courtId;
+            renderAll();
+        }
+
+        function cancelPromotion() {
+            promotionSourceCourtId = null;
+            renderAll();
+        }
+
+        function executePromotion(targetCourtId) {
+            if (!promotionSourceCourtId) return;
+            const sourceCourt = courts.find(c => c.id === promotionSourceCourtId);
+            const targetCourt = courts.find(c => c.id === targetCourtId);
+            
+            if (!sourceCourt || !targetCourt) {
+                cancelPromotion();
+                return;
             }
+            
+            const team1Tag = lastGameTagCounter++;
+            const team2Tag = lastGameTagCounter++;
+
+            [targetCourt.players[0], targetCourt.players[1]].forEach(playerId => {
+                if (playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if (player) {
+                        player.timeOffCourt = Date.now();
+                        player.lastGameTag = team1Tag;
+                    }
+                }
+            });
+            [targetCourt.players[2], targetCourt.players[3]].forEach(playerId => {
+                if (playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if (player) {
+                        player.timeOffCourt = Date.now();
+                        player.lastGameTag = team2Tag;
+                    }
+                }
+            });
+            
+            targetCourt.players = [...sourceCourt.players];
+            targetCourt.players.forEach(playerId => {
+                if(playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if(player) player.lastGameTag = null;
+                }
+            });
+
+            sourceCourt.players = [null, null, null, null];
+            promotionSourceCourtId = null;
+            renderAll();
         }
 
         // ========== MODAL LOGIC ==========
@@ -423,18 +538,12 @@
                 player.gender = document.querySelector('input[name="edit-gender"]:checked').value;
             }
             closeEditModal();
-            if (!rosterView.classList.contains('hidden')) {
-                renderRosterList();
-            } else {
-                renderAll();
-            }
+            if (!rosterView.classList.contains('hidden')) renderRosterList();
+            else renderAll();
         }
 
         // ========== VIEW TOGGLING & RENDERING ==========
         
-        /**
-         * **NEW**: Renders the initial state on page load.
-         */
         function renderAllOnLoad() {
             renderRosterList();
             updateRosterStats();
@@ -454,9 +563,11 @@
         }
         
         function renderAll() {
+            cancelPromotionBtn.classList.toggle('hidden', !promotionSourceCourtId);
             renderCourts();
             renderWaitingQueue();
             updateCheckedInStats();
+            updateWaitingTimers();
         }
 
         function renderRosterList() {
@@ -472,17 +583,21 @@
                 const buttonText = isCheckedIn ? '取消報到' : '報到';
 
                 const playerCard = document.createElement('div');
-                playerCard.className = `p-3 rounded-lg border ${cardBg} transition shadow-sm flex flex-col`;
+                playerCard.className = `p-3 rounded-lg border ${cardBg} transition shadow-sm flex flex-col relative`;
                 
+                const editIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+
                 playerCard.innerHTML = `
+                    <div class="absolute top-1 right-1 flex items-center">
+                        <button onclick="app.openEditModal('${player.id}')" class="text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
+                        <button onclick="app.deletePlayer('${player.id}')" class="text-red-400 hover:text-red-600 font-bold text-xl leading-none p-1" title="取消報名 (刪除)">&times;</button>
+                    </div>
                     <div class="flex-grow">
-                        <div class="font-bold text-lg cursor-pointer" onclick="app.openEditModal('${player.id}')">${player.name}</div>
+                        <div class="font-bold text-lg pr-10">${player.name}</div>
                         <div class="text-sm text-gray-600 mt-1 flex items-center">
-                            <span class="cursor-pointer text-lg" onclick="app.openEditModal('${player.id}')">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                            <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                             <span class="mx-2 text-gray-300">|</span>
-                            <span class="cursor-pointer" onclick="app.openEditModal('${player.id}')">
-                                等級 ${player.level}
-                            </span>
+                            <span>等級 ${player.level}</span>
                              ${player.isSeasonal ? '<span class="ml-auto text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}
                         </div>
                     </div>
@@ -495,115 +610,170 @@
         }
 
         function renderCourts() {
-            courtsContainer.innerHTML = '';
+            formalCourtsContainer.innerHTML = '';
+            preCourtsContainer.innerHTML = '';
+
             courts.forEach(court => {
                 const courtBg = court.type === 'pre-schedule' ? 'bg-indigo-50' : 'bg-white';
                 const courtBorder = court.type === 'pre-schedule' ? 'border-indigo-200' : 'border-gray-200';
-                
                 const courtEl = document.createElement('div');
-                courtEl.className = `p-4 rounded-xl shadow-md border ${courtBg} ${courtBorder}`;
+                courtEl.className = `p-4 rounded-xl shadow-md border ${courtBg} ${courtBorder} transition-all`;
                 
-                const isCourtEmpty = court.players.every(p => p === null);
-                const canAssignGroup = selectedPlayerIds.length === 4 && isCourtEmpty;
+                const emptySlots = court.players.reduce((count, p) => count + (p === null ? 1 : 0), 0);
+                const canAssignGroup = selectedPlayerIds.length > 0 && selectedPlayerIds.length <= emptySlots;
+
+                let actionButtonsHTML = '';
+                if (promotionSourceCourtId) {
+                    if (court.type === 'normal' && court.id !== promotionSourceCourtId) {
+                        courtEl.classList.add('promotion-target');
+                        actionButtonsHTML = `<button class="w-full bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition mb-3" onclick="app.executePromotion('${court.id}')">取代此場地</button>`;
+                    }
+                } else {
+                    const isNormalCourt = court.type === 'normal';
+                    const clearButtonText = isNormalCourt ? '對戰結束' : '清空';
+                    const clearButtonAction = isNormalCourt ? 'endMatch' : 'clearCourt';
+                    let promoteBtn = court.type === 'pre-schedule' ? `<button class="text-xs bg-green-500 text-white py-1 px-2 rounded hover:bg-green-600" onclick="app.startPromotion('${court.id}')">升格</button>` : '';
+                    actionButtonsHTML = `
+                        <div class="flex items-center ml-auto">
+                            ${promoteBtn}
+                            <button class="ml-1 text-xs bg-yellow-500 text-white py-1 px-2 rounded hover:bg-yellow-600" onclick="app.${clearButtonAction}('${court.id}')">${clearButtonText}</button>
+                            <button class="ml-1 text-xs bg-red-500 text-white py-1 px-2 rounded hover:bg-red-600" onclick="app.deleteCourt('${court.id}')">刪除</button>
+                        </div>
+                    `;
+                }
+
+                const editIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
 
                 const playersGrid = court.players.map((playerId, index) => {
                     if (playerId) {
                         const player = players.find(p => p.id === playerId);
+                        
+                        let tagHTML = '';
+                        if (player.lastGameTag !== null) {
+                            // --- MODIFIED: Use letters instead of colors ---
+                            const letter = String.fromCharCode(97 + (player.lastGameTag % 26));
+                            tagHTML = `<span class="ml-2 w-4 h-4 text-xs bg-gray-500 text-white rounded-full flex items-center justify-center font-mono">${letter}</span>`;
+                        }
+
+                        const timerHTML = court.type === 'pre-schedule' 
+                            ? `<div id="timer-${player.id}" class="text-xs text-orange-600 font-semibold mt-1 h-4"></div>` 
+                            : '<div class="h-4 mt-1"></div>';
+
                         return `
-                            <div class="p-3 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
-                                <div class="font-bold cursor-pointer" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">${player.name}</div>
+                            <div class="p-3 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm relative" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
+                                <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
+                                <div class="font-bold pr-6 flex items-center">${player.name}${tagHTML}</div>
                                 <div class="text-sm text-gray-600 mt-1 flex items-center">
-                                    <span class="cursor-pointer text-lg" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                                    <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                                     <span class="mx-2 text-gray-300">|</span>
-                                    <span class="cursor-pointer" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">
-                                        等級 ${player.level} ${player.isSeasonal ? '(季)' : ''}
-                                    </span>
+                                    <span>等級 ${player.level} ${player.isSeasonal ? '(季)' : ''}</span>
                                 </div>
+                                ${timerHTML}
                             </div>
                         `;
                     } else {
-                        return `
-                            <div class="flex items-center justify-center p-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 cursor-pointer hover:bg-green-50 hover:border-green-400 transition" onclick="app.movePlayerToCourt('${court.id}', ${index})">
-                                + 加入球員
-                            </div>
-                        `;
+                        return `<div class="flex items-center justify-center p-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 cursor-pointer hover:bg-green-50 hover:border-green-400 transition" onclick="app.movePlayerToCourt('${court.id}', ${index})">+ 加入球員</div>`;
                     }
                 }).join('');
 
-                const isNormalCourt = court.type === 'normal';
-                const clearButtonText = isNormalCourt ? '對戰結束' : '清空';
-                const clearButtonAction = isNormalCourt ? 'endMatch' : 'clearCourt';
+                const assignGroupButtonHTML = canAssignGroup 
+                    ? `<button class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition mb-3" onclick="app.assignGroupToCourt('${court.id}')">安排此 ${selectedPlayerIds.length} 人上場</button>` 
+                    : '';
 
                 courtEl.innerHTML = `
                     <div class="flex justify-between items-center mb-4">
-                        <input type="text" value="${court.name}" onchange="app.updateCourtName('${court.id}', this.value)" class="text-lg font-bold bg-transparent focus:bg-white rounded px-2 py-1 w-2/3">
-                        <div>
-                            <button class="text-xs bg-yellow-500 text-white py-1 px-2 rounded hover:bg-yellow-600" onclick="app.${clearButtonAction}('${court.id}')">${clearButtonText}</button>
-                            <button class="text-xs bg-red-500 text-white py-1 px-2 rounded hover:bg-red-600 ml-1" onclick="app.deleteCourt('${court.id}')">刪除</button>
-                        </div>
+                        <input type="text" value="${court.name}" onchange="app.updateCourtName('${court.id}', this.value)" class="text-lg font-bold bg-transparent focus:bg-white rounded px-2 py-1 w-1/2">
+                        ${!promotionSourceCourtId ? actionButtonsHTML : ''}
                     </div>
-                    ${canAssignGroup ? `<button class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition mb-3" onclick="app.assignGroupToCourt('${court.id}')">安排此 4 人上場</button>` : ''}
+                    ${promotionSourceCourtId && court.type === 'normal' ? actionButtonsHTML : ''}
+                    ${assignGroupButtonHTML}
                     <div class="grid grid-cols-2 gap-3">
                         ${playersGrid}
                     </div>
                 `;
-                courtsContainer.appendChild(courtEl);
+                
+                if (court.type === 'normal') {
+                    formalCourtsContainer.appendChild(courtEl);
+                } else {
+                    preCourtsContainer.appendChild(courtEl);
+                }
             });
+
+            if (formalCourtsContainer.innerHTML === '') {
+                formalCourtsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-4">請點擊「新增正式球場」</p>';
+            }
+            if (preCourtsContainer.innerHTML === '') {
+                preCourtsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-4">請點擊「新增預排場地」</p>';
+            }
         }
+
 
         function renderWaitingQueue() {
             waitingQueueGrid.innerHTML = '';
-            const playersOnCourtIds = courts.flatMap(c => c.players).filter(p => p !== null);
-            
+            const playersOnCourtIds = new Set(courts.flatMap(c => c.players).filter(p => p !== null));
             const waitingPlayers = players
-                .filter(p => p.status === 'checked-in')
-                .sort((a, b) => (a.timeOffCourt || Infinity) - (b.timeOffCourt || Infinity));
+                .filter(p => p.status === 'checked-in' && !playersOnCourtIds.has(p.id))
+                .sort((a, b) => (a.timeOffCourt || 0) - (b.timeOffCourt || 0));
 
             if (waitingPlayers.length === 0) {
                 waitingQueueGrid.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">目前沒有人在等候</p>';
                 return;
             }
 
-            waitingPlayers.forEach(player => {
-                if (playersOnCourtIds.includes(player.id)) return;
+            const editIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
 
+            waitingPlayers.forEach(player => {
                 const isSelected = selectedPlayerIds.includes(player.id);
                 const cardClasses = isSelected ? 'selected-player-card border-2 border-blue-500' : 'border border-gray-200';
-                
                 const playerCard = document.createElement('div');
-                playerCard.className = `p-3 rounded-lg bg-white cursor-pointer shadow-sm transition-transform transform hover:scale-105 ${cardClasses}`;
+                playerCard.className = `p-3 rounded-lg bg-white cursor-pointer shadow-sm transition-transform transform hover:scale-105 ${cardClasses} relative`;
                 playerCard.onclick = () => selectWaitingPlayer(player.id);
                 
+                let tagHTML = '';
+                if (player.lastGameTag !== null) {
+                    // --- MODIFIED: Use letters instead of colors ---
+                    const letter = String.fromCharCode(97 + (player.lastGameTag % 26));
+                    tagHTML = `<span class="ml-2 w-4 h-4 text-xs bg-gray-500 text-white rounded-full flex items-center justify-center font-mono">${letter}</span>`;
+                }
+
                 playerCard.innerHTML = `
-                    <div class="font-bold cursor-pointer" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">${player.name}</div>
+                    <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
+                    <div class="font-bold pr-6 flex items-center">${player.name}${tagHTML}</div>
                     <div class="text-sm text-gray-600 mt-1 flex items-center">
-                        <span class="cursor-pointer text-lg" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                        <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                         <span class="mx-2 text-gray-300">|</span>
-                        <span class="cursor-pointer" onclick="event.stopPropagation(); app.openEditModal('${player.id}')">
-                            等級 ${player.level} ${player.isSeasonal ? '<span class="text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}
-                        </span>
+                        <span>等級 ${player.level} ${player.isSeasonal ? '<span class="text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}</span>
                     </div>
                     <div id="timer-${player.id}" class="text-xs text-orange-600 font-semibold mt-1 h-4"></div>
                 `;
                 waitingQueueGrid.appendChild(playerCard);
             });
-            updateWaitingTimers();
         }
         
         // ========== STATS & TIMERS ==========
         
         function updateWaitingTimers() {
-            const playersOnCourtIds = courts.flatMap(c => c.players).filter(p => p !== null);
-            const waitingPlayers = players.filter(p => p.status === 'checked-in' && !playersOnCourtIds.includes(p.id));
+            const playersOnNormalCourtIds = new Set(
+                courts
+                    .filter(c => c.type === 'normal')
+                    .flatMap(c => c.players)
+                    .filter(pId => pId !== null)
+            );
 
-            waitingPlayers.forEach(player => {
+            players.forEach(player => {
                 const timerEl = document.getElementById(`timer-${player.id}`);
-                if (timerEl && player.timeOffCourt) {
-                    const elapsedSeconds = Math.floor((Date.now() - player.timeOffCourt) / 1000);
-                    const minutes = Math.floor(elapsedSeconds / 60);
-                    const seconds = elapsedSeconds % 60;
-                    timerEl.textContent = `等待: ${minutes}分 ${String(seconds).padStart(2, '0')}秒`;
-                } else if (timerEl) {
+                if (!timerEl) return; 
+
+                if (player.status === 'checked-in' && !playersOnNormalCourtIds.has(player.id)) {
+                    if (player.timeOffCourt) {
+                        const elapsedSeconds = Math.floor((Date.now() - player.timeOffCourt) / 1000);
+                        const minutes = Math.floor(elapsedSeconds / 60);
+                        const seconds = elapsedSeconds % 60;
+                        timerEl.textContent = `等待: ${minutes}分 ${String(seconds).padStart(2, '0')}秒`;
+                    } else {
+                        timerEl.textContent = '';
+                    }
+                } else {
                     timerEl.textContent = '';
                 }
             });
@@ -646,7 +816,11 @@
             clearCourt,
             updateCourtName,
             assignGroupToCourt,
-            endMatch
+            endMatch,
+            deletePlayer,
+            startPromotion,
+            cancelPromotion,
+            executePromotion
         };
 
         initialize();
