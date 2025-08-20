@@ -30,6 +30,15 @@
             outline: 2px dashed #f59e0b; /* amber-500 */
             outline-offset: 4px;
         }
+        /* NEW: Waiting time card color indicators */
+        .waiting-level-1 { background-color: #fef08a !important; } /* yellow-200 */
+        .waiting-level-2 { background-color: #fdba74 !important; } /* orange-300 */
+        .waiting-level-3 { background-color: #f87171 !important; color: white !important; } /* red-400 */
+        .waiting-level-3 .text-gray-600,
+        .waiting-level-3 .font-bold,
+        .waiting-level-3 .text-orange-600 {
+            color: white !important;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -39,9 +48,12 @@
 
         <!-- ===== 頁面 1: 名單匯入與報到 ===== -->
         <div id="roster-view">
-            <header class="mb-6">
-                <h1 class="text-3xl font-bold text-gray-800">飛煥羽球隊排點系統</h1>
-                <p class="text-gray-500 mt-1">步驟 1: 完成球員報到</p>
+            <header class="mb-6 flex items-center gap-4">
+                <img src="./Feihuan.jpg" alt="隊徽" class="h-16 w-16 rounded-full border-2 border-gray-200">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">飛煥羽球隊排點系統</h1>
+                    <p class="text-gray-500 mt-1">步驟 1: 完成球員報到</p>
+                </div>
             </header>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -79,12 +91,19 @@
 
         <!-- ===== 頁面 2: 排場操作 ===== -->
         <div id="scheduling-view" class="hidden">
-            <header class="mb-6">
-                <div class="flex flex-wrap justify-between items-center gap-4">
-                    <h1 class="text-3xl font-bold text-gray-800">排場操作面板</h1>
-                    <button id="back-to-roster-btn" class="bg-gray-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-gray-600 transition">
-                        ◀ 返回報到頁
-                    </button>
+             <header class="mb-6">
+                <div class="flex flex-wrap justify-between items-start gap-4">
+                    <div class="flex items-center gap-4">
+                        <img src="./Feihuan.jpg" alt="隊徽" class="h-16 w-16 rounded-full border-2 border-gray-200">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-800">排場操作面板</h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 mt-1">
+                        <button id="back-to-roster-btn" class="bg-gray-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-gray-600 transition">
+                            ◀ 返回報到頁
+                        </button>
+                    </div>
                 </div>
                 <!-- 統計數據 -->
                 <div id="checked-in-stats" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
@@ -92,28 +111,29 @@
                 </div>
             </header>
 
-            <!-- 球場控制 -->
-            <div class="flex flex-wrap gap-4 mb-6 items-center">
-                <h2 class="text-xl font-bold">球場管理</h2>
-                <button id="add-court-btn" class="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition text-sm font-semibold">+ 新增正式球場</button>
-                <button id="add-pre-court-btn" class="bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition text-sm font-semibold">+ 新增預排場地</button>
-                <button id="cancel-promotion-btn" class="hidden bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition text-sm font-semibold">取消升格</button>
-            </div>
-
             <!-- 球場區域 -->
             <div class="space-y-8 mb-8">
                 <!-- 正式球場 -->
                 <div>
-                    <h3 class="text-xl font-bold mb-4 text-gray-700 border-b-2 border-gray-300 pb-2">正式球場</h3>
-                    <div id="formal-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-5">
+                    <div class="flex items-center mb-4 border-b-2 border-gray-300 pb-2">
+                        <h3 class="text-xl font-bold text-gray-700">正式球場</h3>
+                        <span class="mx-2 text-gray-300 font-light">|</span>
+                        <button id="add-court-btn" class="bg-blue-500 text-white py-1 px-3 rounded-lg hover:bg-blue-600 transition text-sm font-semibold">+ 新增正式球場</button>
+                    </div>
+                    <div id="formal-courts-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                         <!-- 正式球場卡片會顯示在這裡 -->
                     </div>
                 </div>
 
                 <!-- 預排場地 -->
                 <div>
-                    <h3 class="text-xl font-bold mb-4 text-gray-700 border-b-2 border-gray-300 pb-2">預排場地</h3>
-                    <div id="pre-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-5">
+                    <div class="flex items-center mb-4 border-b-2 border-gray-300 pb-2">
+                        <h3 class="text-xl font-bold text-gray-700">預排場地</h3>
+                        <span class="mx-2 text-gray-300 font-light">|</span>
+                        <button id="add-pre-court-btn" class="bg-indigo-500 text-white py-1 px-3 rounded-lg hover:bg-indigo-600 transition text-sm font-semibold">+ 新增預排場地</button>
+                        <button id="cancel-promotion-btn" class="hidden bg-red-500 text-white py-1 px-3 rounded-lg hover:bg-red-600 transition text-sm font-semibold ml-4">取消升格</button>
+                    </div>
+                    <div id="pre-courts-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                         <!-- 預排場地卡片會顯示在這裡 -->
                     </div>
                 </div>
@@ -156,8 +176,14 @@
                 </div>
             </div>
             <div class="mb-6">
-                <label for="edit-player-level" class="block text-sm font-medium text-gray-700 mb-1">等級 (1-10)</label>
-                <input type="number" id="edit-player-level" min="1" max="10" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <label class="block text-sm font-medium text-gray-700 mb-2">等級</label>
+                <div id="edit-player-level-buttons" class="grid grid-cols-5 gap-2">
+                    <!-- 等級按鈕會由 JavaScript 動態生成 -->
+                </div>
+            </div>
+            <div id="check-in-time-container" class="hidden mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">報到時間</label>
+                <p id="check-in-time-display" class="w-full p-2 bg-gray-100 rounded-lg text-gray-800"></p>
             </div>
             <div class="flex justify-end gap-3">
                 <button id="cancel-edit-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition">取消</button>
@@ -196,7 +222,6 @@
         const modal = document.getElementById('edit-player-modal');
         const editPlayerIdInput = document.getElementById('edit-player-id');
         const editPlayerNameInput = document.getElementById('edit-player-name');
-        const editPlayerLevelInput = document.getElementById('edit-player-level');
         const saveEditBtn = document.getElementById('save-edit-btn');
         const cancelEditBtn = document.getElementById('cancel-edit-btn');
 
@@ -228,18 +253,29 @@
 
         // ========== CORE LOGIC ==========
         
+        // --- MODIFIED: Removed emoji from name, added isCoreMember flag ---
         function loadPredefinedPlayers() {
             const predefinedData = [
-                { name: '⏺️仕庭', gender: 'male' },
-                { name: '⏺️武庫', gender: 'male' },
-                { name: '⏺️筑軒', gender: 'female' },
-                { name: '⏺️鹹鹹', gender: 'female' },
-                { name: '⏺️R薰', gender: 'male' },
-                { name: '⏺️簡峰', gender: 'male' },
-                { name: '⏺️達達', gender: 'male' },
+                { name: '武庫', gender: 'male', isCoreMember: true },
+                { name: '筑軒', gender: 'female', isCoreMember: true },
+                { name: '仕庭', gender: 'male', isCoreMember: true },
+                { name: '鹹鹹', gender: 'female', isCoreMember: true },
+                { name: 'R薰', gender: 'male', isCoreMember: true },
+                { name: '簡峰', gender: 'male', isCoreMember: true },
+                { name: '達達', gender: 'male', isCoreMember: true },
             ];
             players = predefinedData.map((p, index) => ({
-                id: `p_predefined_${index}`, name: p.name, gender: p.gender, isSeasonal: false, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null, gamesPlayed: 0,
+                id: `p_predefined_${index}`, 
+                name: p.name, 
+                gender: p.gender, 
+                isSeasonal: false, 
+                level: 5, 
+                status: 'not-checked-in', 
+                timeOffCourt: null, 
+                lastGameTag: null, 
+                gamesPlayed: 0, 
+                checkInTime: null,
+                isCoreMember: p.isCoreMember || false,
             }));
         }
 
@@ -247,7 +283,7 @@
             const text = rosterInput.value.trim();
             if (!text) return;
             const lines = text.split('\n').filter(line => line.trim() !== '');
-            const existingNames = new Set(players.map(p => p.name.replace(/^⏺️/, '').trim()));
+            const existingNames = new Set(players.map(p => p.name));
             const newPlayers = [];
             lines.forEach((line, index) => {
                 let gender = 'male';
@@ -262,12 +298,12 @@
                 cleanedName = cleanedName.replace(/[🔵🔴]/g, '');
                 cleanedName = cleanedName.replace(/^\d+\.\s*/, '');
                 const finalName = cleanedName.trim();
-                const comparableName = finalName.replace(/^⏺️/, '').trim();
-                if (comparableName && !existingNames.has(comparableName)) {
+                
+                if (finalName && !existingNames.has(finalName)) {
                     newPlayers.push({
-                        id: `p${Date.now()}${index}`, name: finalName, gender, isSeasonal, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null, gamesPlayed: 0,
+                        id: `p${Date.now()}${index}`, name: finalName, gender, isSeasonal, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null, gamesPlayed: 0, checkInTime: null, isCoreMember: false,
                     });
-                    existingNames.add(comparableName);
+                    existingNames.add(finalName);
                 }
             });
             players = players.concat(newPlayers);
@@ -292,8 +328,15 @@
         function toggleCheckIn(playerId) {
             const player = players.find(p => p.id === playerId);
             if (player) {
-                player.status = player.status === 'checked-in' ? 'not-checked-in' : 'checked-in';
-                player.timeOffCourt = player.status === 'checked-in' ? Date.now() : null;
+                if (player.status === 'checked-in') {
+                    player.status = 'not-checked-in';
+                    player.timeOffCourt = null;
+                    player.checkInTime = null;
+                } else {
+                    player.status = 'checked-in';
+                    player.timeOffCourt = Date.now();
+                    player.checkInTime = new Date();
+                }
             }
             renderRosterList();
             const checkedInCount = players.filter(p => p.status === 'checked-in').length;
@@ -313,24 +356,23 @@
             renderAll();
         }
         
+        function relabelCourts() {
+            let normalCounter = 1;
+            let preScheduleCounter = 0;
+            courts.forEach(c => {
+                if (c.type === 'normal') {
+                    c.name = `${normalCounter++}號場地`;
+                } else {
+                    c.name = `${String.fromCharCode(65 + preScheduleCounter++)}場`;
+                }
+            });
+        }
+
         function deleteCourt(courtId) {
             const courtIndex = courts.findIndex(c => c.id === courtId);
             if (courtIndex > -1) {
-                courts[courtIndex].players.forEach(playerId => {
-                    if (playerId) {
-                        const player = players.find(p => p.id === playerId);
-                    }
-                });
                 courts.splice(courtIndex, 1);
-                let normalCounter = 1;
-                let preScheduleCounter = 0;
-                courts.forEach(c => {
-                    if (c.type === 'normal') {
-                        c.name = `${normalCounter++}號場地`;
-                    } else {
-                        c.name = `${String.fromCharCode(65 + preScheduleCounter++)}場`;
-                    }
-                });
+                relabelCourts();
                 renderAll();
             }
         }
@@ -472,14 +514,15 @@
 
         function executePromotion(targetCourtId) {
             if (!promotionSourceCourtId) return;
-            const sourceCourt = courts.find(c => c.id === promotionSourceCourtId);
+            const sourceCourtIndex = courts.findIndex(c => c.id === promotionSourceCourtId);
             const targetCourt = courts.find(c => c.id === targetCourtId);
             
-            if (!sourceCourt || !targetCourt) {
+            if (sourceCourtIndex === -1 || !targetCourt) {
                 cancelPromotion();
                 return;
             }
             
+            const sourceCourt = courts[sourceCourtIndex];
             const team1Tag = lastGameTagCounter++;
             const team2Tag = lastGameTagCounter++;
 
@@ -512,7 +555,9 @@
                 }
             });
 
-            sourceCourt.players = [null, null, null, null];
+            courts.splice(sourceCourtIndex, 1);
+            relabelCourts();
+
             promotionSourceCourtId = null;
             renderAll();
         }
@@ -523,8 +568,44 @@
             if (player) {
                 editPlayerIdInput.value = player.id;
                 editPlayerNameInput.value = player.name;
-                editPlayerLevelInput.value = player.level;
                 document.querySelector(`input[name="edit-gender"][value="${player.gender}"]`).checked = true;
+
+                const levelButtonsContainer = document.getElementById('edit-player-level-buttons');
+                levelButtonsContainer.innerHTML = '';
+                for (let i = 1; i <= 10; i++) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.dataset.level = i;
+                    button.textContent = i;
+                    const isSelected = player.level === i;
+                    button.className = `py-2 rounded-lg transition font-semibold ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`;
+                    button.addEventListener('click', () => {
+                        levelButtonsContainer.querySelectorAll('button').forEach(btn => {
+                            btn.classList.remove('bg-blue-600', 'text-white');
+                            btn.classList.add('bg-gray-200', 'hover:bg-gray-300');
+                        });
+                        button.classList.add('bg-blue-600', 'text-white');
+                        button.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+                    });
+                    levelButtonsContainer.appendChild(button);
+                }
+
+                const checkInTimeContainer = document.getElementById('check-in-time-container');
+                const checkInTimeDisplay = document.getElementById('check-in-time-display');
+
+                if (player.checkInTime) {
+                    const time = new Date(player.checkInTime);
+                    const year = time.getFullYear();
+                    const month = String(time.getMonth() + 1).padStart(2, '0');
+                    const day = String(time.getDate()).padStart(2, '0');
+                    const hours = String(time.getHours()).padStart(2, '0');
+                    const minutes = String(time.getMinutes()).padStart(2, '0');
+                    checkInTimeDisplay.textContent = `${year}/${month}/${day} ${hours}:${minutes}`;
+                    checkInTimeContainer.classList.remove('hidden');
+                } else {
+                    checkInTimeContainer.classList.add('hidden');
+                }
+
                 modal.classList.remove('hidden');
             }
         }
@@ -538,8 +619,12 @@
             const player = players.find(p => p.id === playerId);
             if (player) {
                 player.name = editPlayerNameInput.value.trim();
-                player.level = parseInt(editPlayerLevelInput.value, 10) || 5;
                 player.gender = document.querySelector('input[name="edit-gender"]:checked').value;
+                
+                const selectedButton = document.querySelector('#edit-player-level-buttons .bg-blue-600');
+                if (selectedButton) {
+                    player.level = parseInt(selectedButton.dataset.level, 10);
+                }
             }
             closeEditModal();
             if (!rosterView.classList.contains('hidden')) renderRosterList();
@@ -590,6 +675,12 @@
                 playerCard.className = `p-3 rounded-lg border ${cardBg} transition shadow-sm flex flex-col relative`;
                 
                 const editIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+                
+                // --- MODIFIED: Dynamically add logo for core members ---
+                let nameHTML = player.name;
+                if (player.isCoreMember) {
+                    nameHTML = `<img src="./LOGO_CI_OUT_144_144.png" alt="幹部" class="h-4 w-4 inline-block mr-1">${player.name}`;
+                }
 
                 playerCard.innerHTML = `
                     <div class="absolute top-1 right-1 flex items-center">
@@ -597,10 +688,10 @@
                         <button onclick="app.deletePlayer('${player.id}')" class="text-red-400 hover:text-red-600 font-bold text-xl leading-none p-1" title="取消報名 (刪除)">&times;</button>
                     </div>
                     <div class="flex-grow">
-                        <div class="font-bold text-lg pr-10">${player.name}</div>
+                        <div class="font-bold text-lg pr-10 flex items-center">${nameHTML}</div>
                         <div class="text-sm text-gray-600 mt-1 flex items-center">
                             <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
-                            <span class="mx-2 text-gray-300">|</span>
+                            <span class="mx-2 text-gray-600">|</span>
                             <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
                              ${player.isSeasonal ? '<span class="ml-auto text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}
                         </div>
@@ -659,13 +750,18 @@
                         }
 
                         const timerHTML = court.type === 'pre-schedule' 
-                            ? `<div id="timer-${player.id}" class="text-xs text-orange-600 font-semibold mt-1 h-4"></div>` 
+                            ? `<div id="timer-container-${player.id}" class="mt-1 h-4"></div>` 
                             : '<div class="h-4 mt-1"></div>';
+                        
+                        let nameHTML = player.name;
+                        if (player.isCoreMember) {
+                            nameHTML = `<img src="./LOGO_CI_OUT_144_144.png" alt="幹部" class="h-4 w-4 inline-block mr-1">${player.name}`;
+                        }
 
                         return `
-                            <div class="p-3 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm relative" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
+                            <div id="player-card-${player.id}" class="p-3 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm relative" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
                                 <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
-                                <div class="font-bold pr-6 flex items-center">${player.name}${tagHTML}</div>
+                                <div class="font-bold pr-6 flex items-center">${nameHTML}${tagHTML}</div>
                                 <div class="text-sm text-gray-600 mt-1 flex items-center">
                                     <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                                     <span class="mx-2 text-gray-300">|</span>
@@ -728,7 +824,9 @@
             waitingPlayers.forEach(player => {
                 const isSelected = selectedPlayerIds.includes(player.id);
                 const cardClasses = isSelected ? 'selected-player-card border-2 border-blue-500' : 'border border-gray-200';
+                
                 const playerCard = document.createElement('div');
+                playerCard.id = `player-card-${player.id}`;
                 playerCard.className = `p-3 rounded-lg bg-white cursor-pointer shadow-sm transition-transform transform hover:scale-105 ${cardClasses} relative`;
                 playerCard.onclick = () => selectWaitingPlayer(player.id);
                 
@@ -738,15 +836,20 @@
                     tagHTML = `<span class="ml-2 w-4 h-4 text-xs bg-gray-500 text-white rounded-full flex items-center justify-center font-mono">${letter}</span>`;
                 }
 
+                let nameHTML = player.name;
+                if (player.isCoreMember) {
+                    nameHTML = `<img src="./LOGO_CI_OUT_144_144.png" alt="幹部" class="h-4 w-4 inline-block mr-1">${player.name}`;
+                }
+
                 playerCard.innerHTML = `
                     <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
-                    <div class="font-bold pr-6 flex items-center">${player.name}${tagHTML}</div>
+                    <div class="font-bold pr-6 flex items-center">${nameHTML}${tagHTML}</div>
                     <div class="text-sm text-gray-600 mt-1 flex items-center">
                         <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
-                        <span class="mx-2 text-gray-300">|</span>
+                        <span class="mx-2 text-gray-600">|</span>
                         <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
                     </div>
-                    <div id="timer-${player.id}" class="text-xs text-orange-600 font-semibold mt-1 h-4"></div>
+                    <div id="timer-container-${player.id}" class="mt-1 h-4"></div>
                 `;
                 waitingQueueGrid.appendChild(playerCard);
             });
@@ -763,20 +866,36 @@
             );
 
             players.forEach(player => {
-                const timerEl = document.getElementById(`timer-${player.id}`);
-                if (!timerEl) return; 
+                const playerCard = document.getElementById(`player-card-${player.id}`);
+                const timerContainer = document.getElementById(`timer-container-${player.id}`);
 
                 if (player.status === 'checked-in' && !playersOnNormalCourtIds.has(player.id)) {
                     if (player.timeOffCourt) {
                         const elapsedSeconds = Math.floor((Date.now() - player.timeOffCourt) / 1000);
                         const minutes = Math.floor(elapsedSeconds / 60);
                         const seconds = elapsedSeconds % 60;
-                        timerEl.textContent = `等待: ${minutes}分 ${String(seconds).padStart(2, '0')}秒`;
+                        
+                        if (timerContainer) {
+                           timerContainer.innerHTML = `<span class="text-xs text-orange-600 font-semibold">等待: ${minutes}分 ${String(seconds).padStart(2, '0')}秒</span>`;
+                        }
+
+                        if (playerCard) {
+                            playerCard.classList.remove('waiting-level-1', 'waiting-level-2', 'waiting-level-3');
+                            if (elapsedSeconds >= 15) { 
+                                playerCard.classList.add('waiting-level-3');
+                            } else if (elapsedSeconds >= 10) {
+                                playerCard.classList.add('waiting-level-2');
+                            } else if (elapsedSeconds >= 5) {
+                                playerCard.classList.add('waiting-level-1');
+                            }
+                        }
                     } else {
-                        timerEl.textContent = '';
+                       if (timerContainer) timerContainer.innerHTML = '';
+                       if (playerCard) playerCard.classList.remove('waiting-level-1', 'waiting-level-2', 'waiting-level-3');
                     }
                 } else {
-                    timerEl.textContent = '';
+                    if (timerContainer) timerContainer.innerHTML = '';
+                    if (playerCard) playerCard.classList.remove('waiting-level-1', 'waiting-level-2', 'waiting-level-3');
                 }
             });
         }
