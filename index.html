@@ -881,11 +881,11 @@
 
                         if (playerCard) {
                             playerCard.classList.remove('waiting-level-1', 'waiting-level-2', 'waiting-level-3');
-                            if (elapsedSeconds >= 15) { 
+                            if (elapsedSeconds >= 15*60) { 
                                 playerCard.classList.add('waiting-level-3');
-                            } else if (elapsedSeconds >= 10) {
+                            } else if (elapsedSeconds >= 10*60) {
                                 playerCard.classList.add('waiting-level-2');
-                            } else if (elapsedSeconds >= 5) {
+                            } else if (elapsedSeconds >= 5*60) {
                                 playerCard.classList.add('waiting-level-1');
                             }
                         }
@@ -949,3 +949,4 @@
     </script>
 </body>
 </html>
+
