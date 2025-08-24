@@ -122,7 +122,7 @@
                         <span class="mx-2 text-gray-300 font-light">|</span>
                         <button id="add-court-btn" class="bg-blue-500 text-white py-1 px-3 rounded-lg hover:bg-blue-600 transition text-sm font-semibold">+ 新增正式球場</button>
                     </div>
-                    <div id="formal-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-3">
+                    <div id="formal-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-5">
                         <!-- 正式球場卡片會顯示在這裡 -->
                     </div>
                 </div>
@@ -135,7 +135,7 @@
                         <button id="add-pre-court-btn" class="bg-indigo-500 text-white py-1 px-3 rounded-lg hover:bg-indigo-600 transition text-sm font-semibold">+ 新增預排場地</button>
                         <button id="cancel-promotion-btn" class="hidden bg-red-500 text-white py-1 px-3 rounded-lg hover:bg-red-600 transition text-sm font-semibold ml-4">取消升格</button>
                     </div>
-                    <div id="pre-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-3">
+                    <div id="pre-courts-container" class="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-5">
                         <!-- 預排場地卡片會顯示在這裡 -->
                     </div>
                 </div>
@@ -146,7 +146,7 @@
             <div>
                 <h2 class="text-xl font-bold mb-4">等候區</h2>
                 <div id="waiting-queue" class="p-4 bg-white rounded-xl shadow-md min-h-[150px]">
-                    <div id="waiting-queue-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                    <div id="waiting-queue-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
                        <!-- 等候球員卡片會顯示在這裡 -->
                     </div>
                 </div>
@@ -856,9 +856,9 @@
                         }
 
                         return `
-                            <div id="player-card-${player.id}" class="p-2 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm relative" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
+                            <div id="player-card-${player.id}" class="p-3 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm relative" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
                                 <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
-                                <div class="font-bold text-sm pr-6 flex items-center">${nameHTML}${tagHTML}</div>
+                                <div class="font-bold pr-6 flex items-center">${nameHTML}${tagHTML}</div>
                                 <div class="text-sm text-gray-600 mt-1 flex items-center">
                                     <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                                     <span class="mx-2 text-gray-300">|</span>
@@ -883,7 +883,7 @@
                     </div>
                     ${promotionSourceCourtId && court.type === 'normal' ? actionButtonsHTML : ''}
                     ${assignGroupButtonHTML}
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-2 gap-3">
                         ${playersGrid}
                     </div>
                 `;
