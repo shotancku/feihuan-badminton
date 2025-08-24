@@ -809,7 +809,7 @@
                 const courtBg = court.type === 'pre-schedule' ? 'bg-indigo-50' : 'bg-white';
                 const courtBorder = court.type === 'pre-schedule' ? 'border-indigo-200' : 'border-gray-200';
                 const courtEl = document.createElement('div');
-                courtEl.className = `p-4 rounded-xl shadow-md border ${courtBg} ${courtBorder} transition-all`;
+                courtEl.className = `p-3 rounded-xl shadow-md border ${courtBg} ${courtBorder} transition-all`;
                 
                 const emptySlots = court.players.reduce((count, p) => count + (p === null ? 1 : 0), 0);
                 const canAssignGroup = selectedPlayerIds.length > 0 && selectedPlayerIds.length <= emptySlots;
@@ -847,8 +847,8 @@
                         }
 
                         const timerHTML = court.type === 'pre-schedule' 
-                            ? `<div id="timer-container-${player.id}" class="mt-1 h-4"></div>` 
-                            : '<div class="h-4 mt-1"></div>';
+                            ? `<div id="timer-container-${player.id}" class="mt-1 h-3"></div>` 
+                            : '<div class="h-3 mt-1"></div>';
                         
                         let nameHTML = player.name;
                         if (player.isCoreMember) {
@@ -856,10 +856,10 @@
                         }
 
                         return `
-                            <div id="player-card-${player.id}" class="p-3 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm relative" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
+                            <div id="player-card-${player.id}" class="p-2 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm relative" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
                                 <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
-                                <div class="font-bold pr-6 flex items-center">${nameHTML}${tagHTML}</div>
-                                <div class="text-sm text-gray-600 mt-1 flex items-center">
+                                <div class="font-semibold pr-6 flex items-center">${nameHTML}${tagHTML}</div>
+                                <div class="text-xs text-gray-600 mt-1 flex items-center">
                                     <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                                     <span class="mx-2 text-gray-300">|</span>
                                     <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
@@ -868,7 +868,7 @@
                             </div>
                         `;
                     } else {
-                        return `<div class="flex items-center justify-center p-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 cursor-pointer hover:bg-green-50 hover:border-green-400 transition" onclick="app.movePlayerToCourt('${court.id}', ${index})">+ 加入球員</div>`;
+                        return `<div class="flex items-center justify-center p-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 cursor-pointer hover:bg-green-50 hover:border-green-400 transition" onclick="app.movePlayerToCourt('${court.id}', ${index})">+ 加入球員</div>`;
                     }
                 }).join('');
 
@@ -878,12 +878,12 @@
 
                 courtEl.innerHTML = `
                     <div class="flex justify-between items-center mb-4">
-                        <input type="text" value="${court.name}" onchange="app.updateCourtName('${court.id}', this.value)" class="text-lg font-bold bg-transparent focus:bg-white rounded px-2 py-1 w-1/2">
+                        <input type="text" value="${court.name}" onchange="app.updateCourtName('${court.id}', this.value)" class="text-base font-bold bg-transparent focus:bg-white rounded px-2 py-1 w-1/2">
                         ${!promotionSourceCourtId ? actionButtonsHTML : ''}
                     </div>
                     ${promotionSourceCourtId && court.type === 'normal' ? actionButtonsHTML : ''}
                     ${assignGroupButtonHTML}
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-2">
                         ${playersGrid}
                     </div>
                 `;
@@ -924,7 +924,7 @@
                 
                 const playerCard = document.createElement('div');
                 playerCard.id = `player-card-${player.id}`;
-                playerCard.className = `p-3 rounded-lg bg-white cursor-pointer shadow-sm transition-transform transform hover:scale-105 ${cardClasses} relative`;
+                playerCard.className = `p-2 rounded-lg bg-white cursor-pointer shadow-sm transition-transform transform hover:scale-105 ${cardClasses} relative`;
                 playerCard.onclick = () => selectWaitingPlayer(player.id);
                 
                 let tagHTML = '';
@@ -941,12 +941,12 @@
                 playerCard.innerHTML = `
                     <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
                     <div class="font-bold pr-6 flex items-center">${nameHTML}${tagHTML}</div>
-                    <div class="text-sm text-gray-600 mt-1 flex items-center">
+                    <div class="text-xs text-gray-600 mt-1 flex items-center">
                         <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
                         <span class="mx-2 text-gray-600">|</span>
                         <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
                     </div>
-                    <div id="timer-container-${player.id}" class="mt-1 h-4"></div>
+                    <div id="timer-container-${player.id}" class="mt-1 h-3"></div>
                 `;
                 waitingQueueGrid.appendChild(playerCard);
             });
