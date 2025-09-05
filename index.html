@@ -356,13 +356,13 @@
         
         function loadPredefinedPlayers() {
             const predefinedData = [
-                { name: '武庫', gender: 'male', isCoreMember: true },
-                { name: '筑軒', gender: 'female', isCoreMember: true },
-                { name: '仕庭', gender: 'male', isCoreMember: true },
-                { name: '鹹鹹', gender: 'female', isCoreMember: true },
-                { name: 'R薰', gender: 'male', isCoreMember: true },
-                { name: '簡峰', gender: 'male', isCoreMember: true },
-                { name: '達達', gender: 'male', isCoreMember: true },
+                { name: '武庫', gender: 'male', isCoreMember: true, level: 7 },
+                { name: '筑軒', gender: 'female', isCoreMember: true, level: 6 },
+                { name: '仕庭', gender: 'male', isCoreMember: true, level: 4 },
+                { name: '鹹鹹', gender: 'female', isCoreMember: true, level: 6 },
+                { name: 'R薰', gender: 'male', isCoreMember: true, level: 7 },
+                { name: '簡峰', gender: 'male', isCoreMember: true, level: 7 },
+                { name: '達達', gender: 'male', isCoreMember: true, level: 7 },
             ];
             players = predefinedData.map((p, index) => ({
                 id: `p_predefined_${index}`, 
@@ -1236,4 +1236,5 @@
     </script>
 </body>
 </html>
+
 
