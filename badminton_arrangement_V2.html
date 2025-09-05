@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飛煥羽球隊排點系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f0f2f5;
+        }
+        /* 為點擊的球員卡片增加醒目提示 */
+        .selected-player-card {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.7); /* blue-500 */
+            border-color: #3b82f6; /* blue-500 */
+        }
+        /* 簡單的 modal 淡入動畫 */
+        .modal-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        /* 升格模式下的目標場地醒目提示 */
+        .promotion-target {
+            outline: 2px dashed #f59e0b; /* amber-500 */
+            outline-offset: 4px;
+        }
+        /* Waiting time card color indicators */
+        .waiting-level-1 { background-color: #fef08a !important; } /* yellow-200 */
+        .waiting-level-2 { background-color: #fdba74 !important; } /* orange-300 */
+        .waiting-level-3 { background-color: #f87171 !important; color: white !important; } /* red-400 */
+        .waiting-level-3 .text-gray-600,
+        .waiting-level-3 .font-bold,
+        .waiting-level-3 .text-orange-600 {
+            color: white !important;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- 主容器 -->
+    <div id="app-container" class="p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto">
+
+        <!-- ===== 頁面 1: 名單匯入與報到 ===== -->
+    <div id="roster-view">
+        <header class="mb-6 flex items-center gap-4">
+            <img src=""./Feihuan.jpg"" alt="隊徽" class="h-16 w-16 rounded-full border-2 border-gray-200">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">飛煥羽球隊排點系統</h1>
+            </div>
+        </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左側：匯入與說明 -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-xl font-bold">新增球員名單</h2>
+                        <button id="add-single-player-btn" class="bg-cyan-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-cyan-600 transition text-sm">+ 單一新增</button>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4">
+                        可隨時新增球員名單，他們會被**加入**到現有名單後方 (重複的名字會被過濾)。<br>
+                        <span class="font-semibold text-blue-600">🔵</span>：男生、<span class="font-semibold text-pink-600">🔴</span>：女生<br>
+                        <span class="font-semibold text-green-600">_季</span>：季繳會員<br>
+                    </p>
+                    <textarea id="roster-input" class="w-full h-48 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="一行一位，例如：&#10;🔵 小明"></textarea>
+                    <button id="import-btn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
+                        新增球員
+                    </button>
+                    <div id="roster-stats" class="mt-4 text-sm text-gray-700 space-y-1">
+                        <!-- 名單統計資訊會顯示在這裡 -->
+                    </div>
+                </div>
+
+                <!-- 右側：報到區 -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">球員報到區</h2>
+                        <button id="go-to-scheduling-btn" class="bg-green-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-700 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100" disabled>
+                            前往排點 ▶
+                        </button>
+                    </div>
+                    <div id="check-in-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                        <!-- 球員報到卡片會顯示在這裡 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 頁面 2: 排場操作 ===== -->
+    <div id="scheduling-view" class="hidden">
+         <header class="mb-6">
+             <div class="flex flex-wrap justify-between items-start gap-4">
+                 <div class="flex items-center gap-4">
+                     <img src=""./Feihuan.jpg"" alt="隊徽" class="h-16 w-16 rounded-full border-2 border-gray-200">
+                     <div>
+                         <h1 class="text-3xl font-bold text-gray-800">排場操作面板</h1>
+                     </div>
+                     </div>
+                     <div class="flex items-center gap-4 mt-1">
+                        <!-- NEW: History Button -->
+                        <button id="show-history-btn" class="bg-purple-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-purple-700 transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                            歷史紀錄
+                        </button>
+                        <button id="back-to-roster-btn" class="bg-gray-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-gray-600 transition">
+                             ◀ 返回報到頁
+                         </button>
+                     </div>
+                 </div>
+                 <!-- 統計數據 -->
+                 <div id="checked-in-stats" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                     <!-- 報到統計資訊 -->
+                 </div>
+             </header>
+
+            <!-- 球場區域 -->
+            <div class="space-y-8 mb-8">
+                <!-- 正式球場 -->
+                <div>
+                    <div class="flex items-center mb-4 border-b-2 border-gray-300 pb-2">
+                        <h3 class="text-xl font-bold text-gray-700">正式球場</h3>
+                        <div class="flex items-center ml-auto gap-3">
+                            <button id="toggle-court-order-btn" class="p-1.5 bg-gray-200 rounded-full hover:bg-gray-300 transition" title="切換場地編號順序">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                            </button>
+                            <span class="text-sm font-medium text-gray-600">場地數量:</span>
+                            <button id="decrease-courts-btn" class="bg-gray-200 h-8 w-8 rounded-full font-bold text-lg hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed">-</button>
+                            <span id="court-count-display" class="font-bold text-lg w-8 text-center">1</span>
+                            <button id="increase-courts-btn" class="bg-gray-200 h-8 w-8 rounded-full font-bold text-lg hover:bg-gray-300 transition">+</button>
+                        </div>
+                    </div>
+                    <div id="formal-courts-container" class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <!-- 正式球場卡片會顯示在這裡 -->
+                    </div>
+                </div>
+
+                <!-- 預排場地 -->
+                <div>
+                    <div class="flex items-center mb-4 border-b-2 border-gray-300 pb-2">
+                        <h3 class="text-xl font-bold text-gray-700">預排場地</h3>
+                        <span class="mx-2 text-gray-300 font-light">|</span>
+                        <button id="add-pre-court-btn" class="bg-indigo-500 text-white py-1 px-3 rounded-lg hover:bg-indigo-600 transition text-sm font-semibold">+ 新增預排場地</button>
+                        <button id="cancel-promotion-btn" class="hidden bg-red-500 text-white py-1 px-3 rounded-lg hover:bg-red-600 transition text-sm font-semibold ml-4">取消升格</button>
+                    </div>
+                    <div id="pre-courts-container" class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <!-- 預排場地卡片會顯示在這裡 -->
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 等候區 -->
+            <div>
+                <h2 class="text-xl font-bold mb-4">等候區</h2>
+                <div id="waiting-queue" class="p-4 bg-white rounded-xl shadow-md min-h-[150px]">
+                    <div id="waiting-queue-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                       <!-- 等候球員卡片會顯示在這裡 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== NEW: 頁面 3: 歷史紀錄 ===== -->
+    <div id="history-view" class="hidden">
+        <header class="mb-6 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <img src=""./Feihuan.jpg"" alt="隊徽" class="h-16 w-16 rounded-full border-2 border-gray-200">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">對戰歷史紀錄</h1>
+                </div>
+                </div>
+                <button id="back-to-scheduling-btn" class="bg-gray-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-gray-600 transition">
+                    ◀ 返回排場
+                </button>
+            </header>
+            <div id="history-log-container" class="space-y-3 bg-white p-4 rounded-xl shadow-md max-h-[75vh] overflow-y-auto">
+                <!-- 歷史紀錄會顯示在這裡 -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== Modal: 編輯球員資訊 ===== -->
+    <div id="edit-player-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm modal-fade-in">
+            <h3 class="text-xl font-bold mb-5">編輯球員資訊</h3>
+            <input type="hidden" id="edit-player-id">
+            <div class="mb-4">
+                <label for="edit-player-name" class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+                <input type="text" id="edit-player-name" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">性別</label>
+                <div class="flex gap-x-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="edit-gender" value="male" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                        <span class="ml-2 text-gray-700">🔵 男</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="edit-gender" value="female" class="h-4 w-4 text-pink-600 border-gray-300 focus:ring-pink-500">
+                        <span class="ml-2 text-gray-700">🔴 女</span>
+                    </label>
+                </div>
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">等級</label>
+                <div id="edit-player-level-buttons" class="grid grid-cols-5 gap-2">
+                    <!-- 等級按鈕會由 JavaScript 動態生成 -->
+                </div>
+            </div>
+            <div id="check-in-time-container" class="hidden mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">報到時間</label>
+                <p id="check-in-time-display" class="w-full p-2 bg-gray-100 rounded-lg text-gray-800"></p>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-edit-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition">取消</button>
+                <button id="save-edit-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">儲存變更</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Modal: 新增單一球員 ===== -->
+    <div id="add-player-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm modal-fade-in">
+            <h3 class="text-xl font-bold mb-5">新增單一球員</h3>
+            <div class="mb-4">
+                <label for="add-player-name" class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+                <input type="text" id="add-player-name" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">性別</label>
+                <div class="flex gap-x-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="add-gender" value="male" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked>
+                        <span class="ml-2 text-gray-700">🔵 男</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="add-gender" value="female" class="h-4 w-4 text-pink-600 border-gray-300 focus:ring-pink-500">
+                        <span class="ml-2 text-gray-700">🔴 女</span>
+                    </label>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-add-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition">取消</button>
+                <button id="save-add-btn" class="bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition">確認新增</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ========== 狀態管理 ==========
+        let players = [];
+        let courts = [];
+        let gameHistory = []; // 用於儲存比賽歷史紀錄
+        let selectedPlayerIds = [];
+        let promotionSourceCourtId = null;
+        let lastGameTagCounter = 0;
+        let courtNumberingDirection = 'asc'; // 'asc' for 1->n, 'desc' for n->1
+
+        // ========== DOM 元素 ==========
+        const rosterView = document.getElementById('roster-view');
+        const schedulingView = document.getElementById('scheduling-view');
+        const historyView = document.getElementById('history-view'); // 新增
+
+        const rosterInput = document.getElementById('roster-input');
+        const importBtn = document.getElementById('import-btn');
+        const rosterStats = document.getElementById('roster-stats');
+        const checkInList = document.getElementById('check-in-list');
+        const goToSchedulingBtn = document.getElementById('go-to-scheduling-btn');
+        const backToRosterBtn = document.getElementById('back-to-roster-btn');
+        const checkedInStats = document.getElementById('checked-in-stats');
+        
+        // NEW: Court count controls
+        const decreaseCourtsBtn = document.getElementById('decrease-courts-btn');
+        const increaseCourtsBtn = document.getElementById('increase-courts-btn');
+        const courtCountDisplay = document.getElementById('court-count-display');
+        const toggleCourtOrderBtn = document.getElementById('toggle-court-order-btn');
+
+        const addPreCourtBtn = document.getElementById('add-pre-court-btn');
+        const formalCourtsContainer = document.getElementById('formal-courts-container');
+        const preCourtsContainer = document.getElementById('pre-courts-container');
+        const waitingQueueGrid = document.getElementById('waiting-queue-grid');
+        const cancelPromotionBtn = document.getElementById('cancel-promotion-btn');
+        
+        // 新增：歷史紀錄頁面元素
+        const showHistoryBtn = document.getElementById('show-history-btn');
+        const backToSchedulingBtn = document.getElementById('back-to-scheduling-btn');
+        const historyLogContainer = document.getElementById('history-log-container');
+
+        const modal = document.getElementById('edit-player-modal');
+        const editPlayerIdInput = document.getElementById('edit-player-id');
+        const editPlayerNameInput = document.getElementById('edit-player-name');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        
+        const addSinglePlayerBtn = document.getElementById('add-single-player-btn');
+        const addPlayerModal = document.getElementById('add-player-modal');
+        const addPlayerNameInput = document.getElementById('add-player-name');
+        const saveAddBtn = document.getElementById('save-add-btn');
+        const cancelAddBtn = document.getElementById('cancel-add-btn');
+
+        // ========== 初始化 ==========
+        function initialize() {
+            loadPredefinedPlayers();
+            // Set initial court count instead of calling addCourt directly
+            adjustCourtCount(0, 1); // Initialize with 1 court
+            bindEventListeners();
+            setInterval(updateWaitingTimers, 1000);
+            renderAllOnLoad();
+        }
+
+        // ========== 事件監聽器 ==========
+        function bindEventListeners() {
+            importBtn.addEventListener('click', handleImport);
+            goToSchedulingBtn.addEventListener('click', showSchedulingView);
+            backToRosterBtn.addEventListener('click', showRosterView);
+            
+            // NEW: Court count listeners
+            decreaseCourtsBtn.addEventListener('click', () => adjustCourtCount(-1));
+            increaseCourtsBtn.addEventListener('click', () => adjustCourtCount(1));
+            toggleCourtOrderBtn.addEventListener('click', () => {
+                courtNumberingDirection = courtNumberingDirection === 'asc' ? 'desc' : 'asc';
+                relabelCourts();
+                renderAll();
+            });
+
+            addPreCourtBtn.addEventListener('click', () => addCourt('pre-schedule'));
+            cancelPromotionBtn.addEventListener('click', cancelPromotion);
+            
+            // 新增：歷史紀錄頁面導覽
+            showHistoryBtn.addEventListener('click', showHistoryView);
+            backToSchedulingBtn.addEventListener('click', showSchedulingView);
+
+            saveEditBtn.addEventListener('click', handleSavePlayerEdit);
+            cancelEditBtn.addEventListener('click', closeEditModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeEditModal();
+            });
+
+            addSinglePlayerBtn.addEventListener('click', openAddModal);
+            saveAddBtn.addEventListener('click', handleSavePlayerAdd);
+            cancelAddBtn.addEventListener('click', closeAddModal);
+            addPlayerModal.addEventListener('click', (e) => {
+                if (e.target === addPlayerModal) closeAddModal();
+            });
+        }
+
+        // ========== 核心邏輯 ==========
+        
+        function loadPredefinedPlayers() {
+            const predefinedData = [
+                { name: '武庫', gender: 'male', isCoreMember: true },
+                { name: '筑軒', gender: 'female', isCoreMember: true },
+                { name: '仕庭', gender: 'male', isCoreMember: true },
+                { name: '鹹鹹', gender: 'female', isCoreMember: true },
+                { name: 'R薰', gender: 'male', isCoreMember: true },
+                { name: '簡峰', gender: 'male', isCoreMember: true },
+                { name: '達達', gender: 'male', isCoreMember: true },
+            ];
+            players = predefinedData.map((p, index) => ({
+                id: `p_predefined_${index}`, 
+                name: p.name, 
+                gender: p.gender, 
+                isSeasonal: false, 
+                level: 5, 
+                status: 'not-checked-in', 
+                timeOffCourt: null, 
+                lastGameTag: null, 
+                gamesPlayed: 0, 
+                checkInTime: null,
+                isCoreMember: p.isCoreMember || false,
+            }));
+        }
+
+        function handleImport() {
+            const text = rosterInput.value.trim();
+            if (!text) return;
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const existingNames = new Set(players.map(p => p.name));
+            const newPlayers = [];
+            lines.forEach((line, index) => {
+                let gender = 'male';
+                let isSeasonal = false;
+                let cleanedName = line.replace(/\u00A0/g, ' ').trim();
+                if (cleanedName.includes('🔴')) gender = 'female';
+                else if (cleanedName.includes('🔵')) gender = 'male';
+                if (cleanedName.includes('_季')) {
+                    isSeasonal = true;
+                    cleanedName = cleanedName.replace(/_季/g, '');
+                }
+                cleanedName = cleanedName.replace(/[🔵🔴]/g, '');
+                cleanedName = cleanedName.replace(/^\d+\.\s*/, '');
+                const finalName = cleanedName.trim();
+                
+                if (finalName && !existingNames.has(finalName)) {
+                    newPlayers.push({
+                        id: `p${Date.now()}${index}`, name: finalName, gender, isSeasonal, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null, gamesPlayed: 0, checkInTime: null, isCoreMember: false,
+                    });
+                    existingNames.add(finalName);
+                }
+            });
+            players = players.concat(newPlayers);
+            rosterInput.value = '';
+            renderRosterList();
+            updateRosterStats();
+        }
+
+        function deletePlayer(playerId) {
+            if (confirm('確定要從名單中刪除這位球員嗎？此操作無法復原。')) {
+                const playerIndex = players.findIndex(p => p.id === playerId);
+                if (playerIndex > -1) {
+                    players.splice(playerIndex, 1);
+                    courts.forEach(court => {
+                        const onCourtIndex = court.players.indexOf(playerId);
+                        if (onCourtIndex > -1) court.players[onCourtIndex] = null;
+                    });
+                    renderCurrentView();
+                }
+            }
+        }
+
+        function toggleCheckIn(playerId) {
+            const player = players.find(p => p.id === playerId);
+            if (player) {
+                if (player.status === 'checked-in') {
+                    player.status = 'not-checked-in';
+                    player.timeOffCourt = null;
+                    player.checkInTime = null;
+                } else {
+                    player.status = 'checked-in';
+                    player.timeOffCourt = Date.now();
+                    player.checkInTime = new Date();
+                }
+            }
+            renderRosterList();
+            const checkedInCount = players.filter(p => p.status === 'checked-in').length;
+            goToSchedulingBtn.disabled = checkedInCount === 0;
+        }
+
+        function addCourt(type, shouldRender = true) {
+            const normalCourtCount = courts.filter(c => c.type === 'normal').length;
+            const preScheduleCourtCount = courts.filter(c => c.type === 'pre-schedule').length;
+            const newCourt = {
+                id: `c${Date.now()}`,
+                name: type === 'normal' ? `${normalCourtCount + 1}號場地` : `${String.fromCharCode(65 + preScheduleCourtCount)}場`,
+                type: type,
+                players: [null, null, null, null]
+            };
+            courts.push(newCourt);
+            if (shouldRender) {
+                relabelCourts();
+                renderAll();
+            }
+        }
+
+        function adjustCourtCount(change, absoluteValue = null) {
+            const normalCourts = courts.filter(c => c.type === 'normal');
+            let currentCount = normalCourts.length;
+            
+            let newCount;
+            if (absoluteValue !== null) {
+                newCount = Math.max(1, absoluteValue);
+            } else {
+                newCount = Math.max(1, currentCount + change);
+            }
+
+            if (newCount === currentCount && absoluteValue === null) return;
+
+            if (newCount > currentCount) {
+                for (let i = 0; i < newCount - currentCount; i++) {
+                    addCourt('normal', false);
+                }
+            } else {
+                const courtsToRemove = currentCount - newCount;
+                for (let i = 0; i < courtsToRemove; i++) {
+                    const lastNormalCourtIndex = courts.findLastIndex(c => c.type === 'normal');
+                    if (lastNormalCourtIndex !== -1) {
+                        courts.splice(lastNormalCourtIndex, 1);
+                    }
+                }
+            }
+            relabelCourts();
+            renderAll();
+        }
+        
+        function relabelCourts() {
+            let normalCounter = 1;
+            let preScheduleCounter = 0;
+            const normalCourtTotal = courts.filter(c => c.type === 'normal').length;
+
+            courts.forEach(c => {
+                if (c.type === 'normal') {
+                    if (courtNumberingDirection === 'asc') {
+                        c.name = `${normalCounter++}號場地`;
+                    } else { // 'desc'
+                        c.name = `${normalCourtTotal - normalCounter + 1}號場地`;
+                        normalCounter++;
+                    }
+                } else {
+                    c.name = `${String.fromCharCode(65 + preScheduleCounter++)}場`;
+                }
+            });
+        }
+
+        function deleteCourt(courtId) {
+            const courtIndex = courts.findIndex(c => c.id === courtId);
+            if (courtIndex > -1) {
+                const court = courts[courtIndex];
+                if (court.players.some(p => p !== null)) {
+                    if (!confirm('此場地上還有球員，確定要刪除嗎？場上球員將會回到等候區。')) {
+                        return;
+                    }
+                }
+                courts.splice(courtIndex, 1);
+                relabelCourts();
+                renderAll();
+            }
+        }
+
+        function movePlayerToWaiting(playerId, courtId) {
+            const court = courts.find(c => c.id === courtId);
+            if (court) {
+                const playerIndex = court.players.indexOf(playerId);
+                if (playerIndex > -1) {
+                    court.players[playerIndex] = null;
+                    selectedPlayerIds = [];
+                    renderAll();
+                }
+            }
+        }
+        
+        function movePlayerToCourt(courtId, slotIndex) {
+            if (selectedPlayerIds.length !== 1) return;
+            const playerIdToMove = selectedPlayerIds[0];
+            const playerToMove = players.find(p => p.id === playerIdToMove);
+            const court = courts.find(c => c.id === courtId);
+
+            if (playerToMove && court && court.players[slotIndex] === null) {
+                // 從任何其他場地移除該球員
+                courts.forEach(c => {
+                    const idx = c.players.indexOf(playerIdToMove);
+                    if (idx > -1) c.players[idx] = null;
+                });
+                
+                court.players[slotIndex] = playerIdToMove;
+                
+                if (court.type === 'normal') {
+                    playerToMove.lastGameTag = null;
+                }
+
+                selectedPlayerIds = [];
+                renderAll();
+            }
+        }
+
+        function assignGroupToCourt(courtId) {
+            if (selectedPlayerIds.length === 0) return;
+
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return;
+
+            const emptySlots = court.players.reduce((count, p) => count + (p === null ? 1 : 0), 0);
+
+            if (selectedPlayerIds.length <= emptySlots) {
+                const playersToAssign = [...selectedPlayerIds];
+
+                // 從任何其他場地移除這些球員
+                playersToAssign.forEach(playerId => {
+                    courts.forEach(c => {
+                        const idx = c.players.indexOf(playerId);
+                        if (idx > -1) c.players[idx] = null;
+                    });
+                });
+
+                for (let i = 0; i < court.players.length && playersToAssign.length > 0; i++) {
+                    if (court.players[i] === null) {
+                        const playerId = playersToAssign.shift();
+                        court.players[i] = playerId;
+                        
+                        if (court.type === 'normal') {
+                            const player = players.find(p => p.id === playerId);
+                            if (player) player.lastGameTag = null;
+                        }
+                    }
+                }
+                
+                selectedPlayerIds = [];
+                renderAll();
+            }
+        }
+        
+        function selectWaitingPlayer(playerId) {
+            const index = selectedPlayerIds.indexOf(playerId);
+            if (index > -1) {
+                selectedPlayerIds.splice(index, 1);
+            } else if (selectedPlayerIds.length < 4) {
+                selectedPlayerIds.push(playerId);
+            }
+            renderAll();
+        }
+
+        // 新增：記錄一場已完成比賽的函式
+        function logGame(courtName, courtPlayers) {
+            const getPlayerName = (id) => players.find(p => p.id === id)?.name || '未知球員';
+            const team1 = [courtPlayers[0], courtPlayers[1]].filter(p => p).map(getPlayerName);
+            const team2 = [courtPlayers[2], courtPlayers[3]].filter(p => p).map(getPlayerName);
+
+            if (team1.length === 0 && team2.length === 0) return; // 不要記錄空的場地
+
+            const logEntry = {
+                id: `log_${Date.now()}`,
+                endTime: new Date(),
+                courtName: courtName,
+                team1: team1,
+                team2: team2,
+            };
+            gameHistory.unshift(logEntry); // 加到陣列的最前面
+        }
+
+
+        function endMatch(courtId) {
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return;
+            
+            // 新增：在結束比賽前記錄
+            logGame(court.name, [...court.players]);
+
+            const team1Tag = lastGameTagCounter++;
+            const team2Tag = lastGameTagCounter++;
+
+            [court.players[0], court.players[1]].forEach(playerId => {
+                if (playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if (player) {
+                        player.timeOffCourt = Date.now();
+                        player.lastGameTag = team1Tag;
+                        player.gamesPlayed++;
+                    }
+                }
+            });
+
+            [court.players[2], court.players[3]].forEach(playerId => {
+                if (playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if (player) {
+                        player.timeOffCourt = Date.now();
+                        player.lastGameTag = team2Tag;
+                        player.gamesPlayed++;
+                    }
+                }
+            });
+
+            court.players = [null, null, null, null];
+            selectedPlayerIds = [];
+            renderAll();
+        }
+
+        function clearCourt(courtId) {
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return;
+            court.players = [null, null, null, null];
+            selectedPlayerIds = [];
+            renderAll();
+        }
+        
+        function updateCourtName(courtId, newName) {
+            const court = courts.find(c => c.id === courtId);
+            if (court) court.name = newName;
+        }
+
+        // ========== 升格邏輯 ==========
+        function startPromotion(courtId) {
+            promotionSourceCourtId = courtId;
+            renderAll();
+        }
+
+        function cancelPromotion() {
+            promotionSourceCourtId = null;
+            renderAll();
+        }
+
+        function executePromotion(targetCourtId) {
+            if (!promotionSourceCourtId) return;
+            const sourceCourtIndex = courts.findIndex(c => c.id === promotionSourceCourtId);
+            const targetCourt = courts.find(c => c.id === targetCourtId);
+            
+            if (sourceCourtIndex === -1 || !targetCourt) {
+                cancelPromotion();
+                return;
+            }
+            
+            // 新增：在目標場地被取代前，記錄該場比賽
+            logGame(targetCourt.name, [...targetCourt.players]);
+
+            const sourceCourt = courts[sourceCourtIndex];
+            const team1Tag = lastGameTagCounter++;
+            const team2Tag = lastGameTagCounter++;
+
+            // 被取代的球員下場，並分配隊友標記
+            [targetCourt.players[0], targetCourt.players[1]].forEach(playerId => {
+                if (playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if (player) {
+                        player.timeOffCourt = Date.now();
+                        player.lastGameTag = team1Tag; // 為第一隊加上標記
+                        player.gamesPlayed++;
+                    }
+                }
+            });
+            [targetCourt.players[2], targetCourt.players[3]].forEach(playerId => {
+                if (playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if (player) {
+                        player.timeOffCourt = Date.now();
+                        player.lastGameTag = team2Tag; // 為第二隊加上標記
+                        player.gamesPlayed++;
+                    }
+                }
+            });
+                        
+            targetCourt.players = [...sourceCourt.players];
+            targetCourt.players.forEach(playerId => {
+                if(playerId) {
+                    const player = players.find(p => p.id === playerId);
+                    if(player) player.lastGameTag = null; // 新上場的球員清除標籤
+                }
+            });
+
+            courts.splice(sourceCourtIndex, 1);
+            relabelCourts();
+
+            promotionSourceCourtId = null;
+            renderAll();
+        }
+
+        // ========== 彈出視窗邏輯 ==========
+        function openEditModal(playerId) {
+            const player = players.find(p => p.id === playerId);
+            if (player) {
+                editPlayerIdInput.value = player.id;
+                editPlayerNameInput.value = player.name;
+                document.querySelector(`input[name="edit-gender"][value="${player.gender}"]`).checked = true;
+
+                const levelButtonsContainer = document.getElementById('edit-player-level-buttons');
+                levelButtonsContainer.innerHTML = '';
+                for (let i = 1; i <= 10; i++) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.dataset.level = i;
+                    button.textContent = i;
+                    const isSelected = player.level === i;
+                    button.className = `py-2 rounded-lg transition font-semibold ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`;
+                    button.addEventListener('click', () => {
+                        levelButtonsContainer.querySelectorAll('button').forEach(btn => {
+                            btn.classList.remove('bg-blue-600', 'text-white');
+                            btn.classList.add('bg-gray-200', 'hover:bg-gray-300');
+                        });
+                        button.classList.add('bg-blue-600', 'text-white');
+                        button.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+                    });
+                    levelButtonsContainer.appendChild(button);
+                }
+
+                const checkInTimeContainer = document.getElementById('check-in-time-container');
+                const checkInTimeDisplay = document.getElementById('check-in-time-display');
+
+                if (player.checkInTime) {
+                    const time = new Date(player.checkInTime);
+                    checkInTimeDisplay.textContent = time.toLocaleString('zh-TW');
+                    checkInTimeContainer.classList.remove('hidden');
+                } else {
+                    checkInTimeContainer.classList.add('hidden');
+                }
+
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeEditModal() {
+            modal.classList.add('hidden');
+        }
+
+        function handleSavePlayerEdit() {
+            const playerId = editPlayerIdInput.value;
+            const player = players.find(p => p.id === playerId);
+            if (player) {
+                player.name = editPlayerNameInput.value.trim();
+                player.gender = document.querySelector('input[name="edit-gender"]:checked').value;
+                
+                const selectedButton = document.querySelector('#edit-player-level-buttons .bg-blue-600');
+                if (selectedButton) {
+                    player.level = parseInt(selectedButton.dataset.level, 10);
+                }
+            }
+            closeEditModal();
+            renderCurrentView();
+        }
+
+        function openAddModal() {
+            addPlayerNameInput.value = '';
+            document.querySelector('input[name="add-gender"][value="male"]').checked = true;
+            addPlayerModal.classList.remove('hidden');
+            addPlayerNameInput.focus();
+        }
+
+        function closeAddModal() {
+            addPlayerModal.classList.add('hidden');
+        }
+
+        function handleSavePlayerAdd() {
+            const name = addPlayerNameInput.value.trim();
+            if (!name) return;
+            
+            const existingNames = new Set(players.map(p => p.name));
+            if (existingNames.has(name)) {
+                // 使用自訂的提示框代替 alert
+                showCustomAlert("球員名稱重複！");
+                return;
+            }
+
+            const gender = document.querySelector('input[name="add-gender"]:checked').value;
+            
+            const newPlayer = {
+                id: `p${Date.now()}`, name: name, gender: gender, isSeasonal: false, level: 5, status: 'not-checked-in', timeOffCourt: null, lastGameTag: null, gamesPlayed: 0, checkInTime: null, isCoreMember: false,
+            };
+
+            players.push(newPlayer);
+            closeAddModal();
+            renderRosterList();
+            updateRosterStats();
+        }
+
+        // ========== 視圖切換與渲染 ==========
+        
+        function renderAllOnLoad() {
+            renderRosterList();
+            updateRosterStats();
+        }
+
+        function showSchedulingView() {
+            rosterView.classList.add('hidden');
+            historyView.classList.add('hidden');
+            schedulingView.classList.remove('hidden');
+            renderAll();
+        }
+
+        function showRosterView() {
+            schedulingView.classList.add('hidden');
+            historyView.classList.add('hidden');
+            rosterView.classList.remove('hidden');
+            selectedPlayerIds = [];
+            renderRosterList();
+            updateRosterStats();
+        }
+        
+        // 新增：顯示歷史紀錄頁面函式
+        function showHistoryView() {
+            schedulingView.classList.add('hidden');
+            historyView.classList.remove('hidden');
+            renderHistoryLog();
+        }
+
+        function renderCurrentView() {
+            if (!rosterView.classList.contains('hidden')) {
+                renderRosterList();
+                updateRosterStats();
+            } else if (!schedulingView.classList.contains('hidden')) {
+                renderAll();
+            } else if (!historyView.classList.contains('hidden')) {
+                renderHistoryLog();
+            }
+        }
+        
+        function renderAll() {
+            cancelPromotionBtn.classList.toggle('hidden', !promotionSourceCourtId);
+            renderCourts();
+            renderWaitingQueue();
+            updateCheckedInStats();
+            updateWaitingTimers();
+        }
+
+        function renderRosterList() {
+            checkInList.innerHTML = '';
+            if (players.length === 0) {
+                checkInList.innerHTML = '<p class="col-span-full text-center text-gray-500 py-10">請先從左側匯入名單...</p>';
+                return;
+            }
+
+            const sortedPlayers = [...players].sort((a, b) => {
+                const aCheckedIn = a.status === 'checked-in';
+                const bCheckedIn = b.status === 'checked-in';
+
+                // 主要排序：未報到者優先
+                if (aCheckedIn !== bCheckedIn) {
+                    return aCheckedIn ? 1 : -1; // 已報到者排在後面
+                }
+
+                // 次要排序：在相同報到狀態下，幹部優先
+                if (a.isCoreMember !== b.isCoreMember) {
+                    return a.isCoreMember ? -1 : 1; // 幹部排在前面
+                }
+
+                return 0;
+            });
+
+            sortedPlayers.forEach(player => {
+                const isCheckedIn = player.status === 'checked-in';
+                const cardBg = isCheckedIn ? 'bg-green-100 border-green-400' : 'bg-white border-gray-200';
+                const buttonBg = isCheckedIn ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600';
+                const buttonText = isCheckedIn ? '取消報到' : '報到';
+
+                const playerCard = document.createElement('div');
+                playerCard.className = `p-3 rounded-lg border ${cardBg} transition shadow-sm flex flex-col relative`;
+                
+                const editIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+                
+                let nameHTML = player.name;
+                if (player.isCoreMember) {
+                    nameHTML = `<img src="./LOGO_CI_OUT_144_144.png" alt="幹部" class="h-4 w-4 inline-block mr-1 rounded-full">${player.name}`;
+                }
+
+                playerCard.innerHTML = `
+                    <div class="absolute top-1 right-1 flex items-center">
+                        <button onclick="app.openEditModal('${player.id}')" class="text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
+                        ${!player.isCoreMember ? `<button onclick="app.deletePlayer('${player.id}')" class="text-red-400 hover:text-red-600 font-bold text-xl leading-none p-1" title="取消報名 (刪除)">&times;</button>` : ''}
+                    </div>
+                    <div class="flex-grow">
+                        <div class="font-bold text-lg pr-10 flex items-center">${nameHTML}</div>
+                        <div class="text-sm text-gray-600 mt-1 flex items-center">
+                            <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                            <span class="mx-2 text-gray-600">|</span>
+                            <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
+                             ${player.isSeasonal ? '<span class="ml-auto text-xs font-semibold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">季</span>' : ''}
+                        </div>
+                    </div>
+                    <button class="w-full mt-3 text-white text-sm font-bold py-1 rounded-md ${buttonBg} transition" onclick="app.toggleCheckIn('${player.id}')">
+                        ${buttonText}
+                    </button>
+                `;
+                checkInList.appendChild(playerCard);
+            });
+        }
+
+        function renderCourts() {
+            const normalCourtCount = courts.filter(c => c.type === 'normal').length;
+            courtCountDisplay.textContent = normalCourtCount;
+            decreaseCourtsBtn.disabled = normalCourtCount <= 1;
+
+            formalCourtsContainer.innerHTML = '';
+            preCourtsContainer.innerHTML = '';
+
+            courts.forEach(court => {
+                const courtBg = court.type === 'pre-schedule' ? 'bg-indigo-50' : 'bg-white';
+                const courtBorder = court.type === 'pre-schedule' ? 'border-indigo-200' : 'border-gray-200';
+                const courtEl = document.createElement('div');
+                courtEl.className = `p-3 rounded-xl shadow-md border ${courtBg} ${courtBorder} transition-all`;
+                
+                const emptySlots = court.players.reduce((count, p) => count + (p === null ? 1 : 0), 0);
+                const canAssignGroup = selectedPlayerIds.length > 0 && selectedPlayerIds.length <= emptySlots;
+
+                let actionButtonsHTML = '';
+                if (promotionSourceCourtId) {
+                    if (court.type === 'normal' && court.id !== promotionSourceCourtId) {
+                        courtEl.classList.add('promotion-target');
+                        actionButtonsHTML = `<button class="w-full bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition mb-3" onclick="app.executePromotion('${court.id}')">取代此場地</button>`;
+                    }
+                } else {
+                    const isNormalCourt = court.type === 'normal';
+                    const clearButtonText = isNormalCourt ? '對戰結束' : '清空';
+                    const clearButtonAction = isNormalCourt ? 'endMatch' : 'clearCourt';
+                    let promoteBtn = court.type === 'pre-schedule' ? `<button class="text-xs bg-green-500 text-white py-1 px-2 rounded hover:bg-green-600" onclick="app.startPromotion('${court.id}')">升格</button>` : '';
+                    actionButtonsHTML = `
+                        <div class="flex items-center ml-auto">
+                            ${promoteBtn}
+                            <button class="ml-1 text-xs bg-yellow-500 text-white py-1 px-2 rounded hover:bg-yellow-600" onclick="app.${clearButtonAction}('${court.id}')">${clearButtonText}</button>
+                            ${!isNormalCourt ? `<button class="ml-1 text-xs bg-red-500 text-white py-1 px-2 rounded hover:bg-red-600" onclick="app.deleteCourt('${court.id}')">刪除</button>` : ''}
+                        </div>
+                    `;
+                }
+
+                const editIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+
+                const playersGrid = court.players.map((playerId, index) => {
+                    if (playerId) {
+                        const player = players.find(p => p.id === playerId);
+                        
+                        let tagHTML = '';
+                        if (player.lastGameTag !== null) {
+                            const letter = String.fromCharCode(97 + (player.lastGameTag % 26));
+                            tagHTML = `<span class="ml-2 w-4 h-4 text-xs bg-gray-500 text-white rounded-full flex items-center justify-center font-mono">${letter}</span>`;
+                        }
+
+                        const timerHTML = court.type === 'pre-schedule' 
+                            ? `<div id="timer-container-${player.id}" class="mt-1 h-3"></div>` 
+                            : '<div class="h-3 mt-1"></div>';
+                        
+                        let nameHTML = player.name;
+                        if (player.isCoreMember) {
+                            nameHTML = `<img src="./LOGO_CI_OUT_144_144.png" alt="幹部" class="h-4 w-4 inline-block mr-1 rounded-full">${player.name}`;
+                        }
+
+                        return `
+                            <div id="player-card-${player.id}" class="p-2 rounded-lg bg-gray-100 border border-gray-300 cursor-pointer shadow-sm relative" onclick="app.movePlayerToWaiting('${player.id}', '${court.id}')">
+                                <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
+                                <div class="font-semibold text-sm pr-6 flex items-center">${nameHTML}${tagHTML}</div>
+                                <div class="text-xs text-gray-600 mt-1 flex items-center">
+                                    <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                                    <span class="mx-2 text-gray-300">|</span>
+                                    <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
+                                </div>
+                                ${timerHTML}
+                            </div>
+                        `;
+                    } else {
+                        return `<div class="flex items-center justify-center p-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 cursor-pointer hover:bg-green-50 hover:border-green-400 transition min-h-[76px]" onclick="app.movePlayerToCourt('${court.id}', ${index})">+ 加入球員</div>`;
+                    }
+                }).join('');
+
+                const assignGroupButtonHTML = canAssignGroup 
+                    ? `<button class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition mb-3" onclick="app.assignGroupToCourt('${court.id}')">安排此 ${selectedPlayerIds.length} 人上場</button>` 
+                    : '';
+
+                courtEl.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <input type="text" value="${court.name}" onchange="app.updateCourtName('${court.id}', this.value)" class="text-base font-bold bg-transparent focus:bg-white rounded px-2 py-1 w-1/2">
+                        ${!promotionSourceCourtId ? actionButtonsHTML : ''}
+                    </div>
+                    ${promotionSourceCourtId && court.type === 'normal' ? actionButtonsHTML : ''}
+                    ${assignGroupButtonHTML}
+                    <div class="grid grid-cols-2 gap-2">
+                        ${playersGrid}
+                    </div>
+                `;
+                
+                if (court.type === 'normal') {
+                    formalCourtsContainer.appendChild(courtEl);
+                } else {
+                    preCourtsContainer.appendChild(courtEl);
+                }
+            });
+
+            if (formalCourtsContainer.innerHTML === '') {
+                formalCourtsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-4">請點擊「+/-」按鈕來設定場地數量</p>';
+            }
+            if (preCourtsContainer.innerHTML === '') {
+                preCourtsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-4">請點擊「新增預排場地」</p>';
+            }
+        }
+
+
+        function renderWaitingQueue() {
+            waitingQueueGrid.innerHTML = '';
+            const playersOnCourtIds = new Set(courts.flatMap(c => c.players).filter(p => p !== null));
+            const waitingPlayers = players
+                .filter(p => p.status === 'checked-in' && !playersOnCourtIds.has(p.id))
+                .sort((a, b) => (a.timeOffCourt || 0) - (b.timeOffCourt || 0));
+
+            if (waitingPlayers.length === 0) {
+                waitingQueueGrid.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">目前沒有人在等候</p>';
+                return;
+            }
+
+            const editIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+
+            waitingPlayers.forEach(player => {
+                const isSelected = selectedPlayerIds.includes(player.id);
+                const cardClasses = isSelected ? 'selected-player-card border-2 border-blue-500' : 'border border-gray-200';
+                
+                const playerCard = document.createElement('div');
+                playerCard.id = `player-card-${player.id}`;
+                playerCard.className = `p-2 rounded-lg bg-white cursor-pointer shadow-sm transition-transform transform hover:scale-105 ${cardClasses} relative`;
+                playerCard.onclick = () => selectWaitingPlayer(player.id);
+                
+                let tagHTML = '';
+                if (player.lastGameTag !== null) {
+                    const letter = String.fromCharCode(97 + (player.lastGameTag % 26));
+                    tagHTML = `<span class="ml-2 w-4 h-4 text-xs bg-gray-500 text-white rounded-full flex items-center justify-center font-mono">${letter}</span>`;
+                }
+
+                let nameHTML = player.name;
+                if (player.isCoreMember) {
+                    nameHTML = `<img src="./LOGO_CI_OUT_144_144.png" alt="幹部" class="h-4 w-4 inline-block mr-1 rounded-full">${player.name}`;
+                }
+
+                playerCard.innerHTML = `
+                    <button onclick="event.stopPropagation(); app.openEditModal('${player.id}')" class="absolute top-1 right-1 text-gray-400 hover:text-blue-600 leading-none p-1" title="編輯">${editIconSVG}</button>
+                    <div class="font-semibold text-sm pr-6 flex items-center">${nameHTML}${tagHTML}</div>
+                    <div class="text-xs text-gray-600 mt-1 flex items-center">
+                        <span class="text-lg">${player.gender === 'male' ? '🔵' : '🔴'}</span>
+                        <span class="mx-2 text-gray-600">|</span>
+                        <span>等級 ${player.level} | ${player.gamesPlayed}場</span>
+                    </div>
+                    <div id="timer-container-${player.id}" class="mt-1 h-3"></div>
+                `;
+                waitingQueueGrid.appendChild(playerCard);
+            });
+        }
+        
+        // 新增：渲染歷史紀錄列表函式
+        function renderHistoryLog() {
+            historyLogContainer.innerHTML = '';
+            if (gameHistory.length === 0) {
+                historyLogContainer.innerHTML = '<p class="text-center text-gray-500 py-12">目前沒有任何歷史紀錄</p>';
+                return;
+            }
+
+            gameHistory.forEach(log => {
+                const logEl = document.createElement('div');
+                logEl.className = 'p-4 border border-gray-200 rounded-lg bg-gray-50 flex flex-col md:flex-row items-start md:items-center gap-4';
+
+                const time = log.endTime;
+                const hours = String(time.getHours()).padStart(2, '0');
+                const minutes = String(time.getMinutes()).padStart(2, '0');
+
+                logEl.innerHTML = `
+                    <div class="flex-shrink-0 text-center">
+                        <div class="text-xs text-gray-500">結束時間</div>
+                        <div class="font-mono font-bold text-lg text-gray-700">${hours}:${minutes}</div>
+                    </div>
+                    <div class="w-full md:w-auto md:flex-shrink-0 md:text-center bg-blue-100 text-blue-800 font-bold px-4 py-1 rounded-md">
+                        ${log.courtName}
+                    </div>
+                    <div class="flex-grow flex flex-col sm:flex-row items-center justify-center gap-2 text-center w-full">
+                        <div class="font-semibold text-gray-800 p-2 rounded-md w-full sm:w-auto">${log.team1.join(' & ') || 'N/A'}</div>
+                        <div class="text-red-500 font-bold text-lg">VS</div>
+                        <div class="font-semibold text-gray-800 p-2 rounded-md w-full sm:w-auto">${log.team2.join(' & ') || 'N/A'}</div>
+                    </div>
+                `;
+                historyLogContainer.appendChild(logEl);
+            });
+        }
+
+        // ========== 統計與計時器 ==========
+        
+        function updateWaitingTimers() {
+            // 只有在正式場地上的人不算在等待計時
+            const playersOnNormalCourtIds = new Set(
+                courts
+                    .filter(c => c.type === 'normal')
+                    .flatMap(c => c.players)
+                    .filter(pId => pId !== null)
+            );
+
+            players.forEach(player => {
+                const playerCard = document.getElementById(`player-card-${player.id}`);
+                const timerContainer = document.getElementById(`timer-container-${player.id}`);
+
+                if (player.status === 'checked-in' && !playersOnNormalCourtIds.has(player.id)) {
+                    if (player.timeOffCourt) {
+                        const elapsedSeconds = Math.floor((Date.now() - player.timeOffCourt) / 1000);
+                        const minutes = Math.floor(elapsedSeconds / 60);
+                        const seconds = elapsedSeconds % 60;
+                        
+                        if (timerContainer) {
+                           timerContainer.innerHTML = `<span class="text-xs text-orange-600 font-semibold">等待: ${minutes}分 ${String(seconds).padStart(2, '0')}秒</span>`;
+                        }
+
+                        if (playerCard) {
+                            playerCard.classList.remove('waiting-level-1', 'waiting-level-2', 'waiting-level-3');
+                            if (elapsedSeconds >= 14*60) { 
+                                playerCard.classList.add('waiting-level-3');
+                            } else if (elapsedSeconds >= 11*60) {
+                                playerCard.classList.add('waiting-level-2');
+                            } else if (elapsedSeconds >= 7*60) {
+                                playerCard.classList.add('waiting-level-1');
+                            }
+                        }
+                    }
+                } else {
+                    if (timerContainer) timerContainer.innerHTML = '';
+                    if (playerCard) playerCard.classList.remove('waiting-level-1', 'waiting-level-2', 'waiting-level-3');
+                }
+            });
+        }
+
+        function updateRosterStats() {
+            const maleCount = players.filter(p => p.gender === 'male').length;
+            const femaleCount = players.filter(p => p.gender === 'female').length;
+            const seasonalCount = players.filter(p => p.isSeasonal).length;
+            rosterStats.innerHTML = `
+                <p>總人數: <span class="font-bold">${players.length}</span> 人</p>
+                <p>男: <span class="font-bold text-blue-600">${maleCount}</span> 人 / 女: <span class="font-bold text-pink-600">${femaleCount}</span> 人</p>
+                <p>季繳: <span class="font-bold text-green-600">${seasonalCount}</span> 人</p>
+            `;
+        }
+
+        function updateCheckedInStats() {
+            const checkedInPlayers = players.filter(p => p.status === 'checked-in');
+            const maleCount = checkedInPlayers.filter(p => p.gender === 'male').length;
+            const femaleCount = checkedInPlayers.filter(p => p.gender === 'female').length;
+            const playersOnCourtCount = courts.flatMap(c => c.players).filter(p => p !== null).length;
+            const waitingCount = checkedInPlayers.length - playersOnCourtCount;
+
+            checkedInStats.innerHTML = `
+                <div class="bg-white p-3 rounded-lg shadow-sm"><div class="text-gray-500 text-sm">報到總數</div><div class="text-2xl font-bold">${checkedInPlayers.length}</div></div>
+                <div class="bg-white p-3 rounded-lg shadow-sm"><div class="text-gray-500 text-sm">男 / 女</div><div class="text-2xl font-bold"><span class="text-blue-600">${maleCount}</span> / <span class="text-pink-600">${femaleCount}</span></div></div>
+                <div class="bg-white p-3 rounded-lg shadow-sm"><div class="text-gray-500 text-sm">場上人數</div><div class="text-2xl font-bold text-green-600">${playersOnCourtCount}</div></div>
+                <div class="bg-white p-3 rounded-lg shadow-sm"><div class="text-gray-500 text-sm">等候人數</div><div class="text-2xl font-bold text-orange-600">${waitingCount}</div></div>
+            `;
+        }
+        
+        // 為了避免瀏覽器原生的 alert 和 confirm 造成預覽問題，使用簡易的替代方案
+        function showCustomAlert(message) {
+            // 在實際應用中，這裡可以替換成一個更好看的 modal 元件
+            console.warn("Alert:", message);
+        }
+
+
+        // 將函式暴露到 window 物件，以便在 HTML onclick 中呼叫
+        window.app = {
+            toggleCheckIn,
+            openEditModal,
+            movePlayerToWaiting,
+            movePlayerToCourt,
+            selectWaitingPlayer,
+            deleteCourt,
+            clearCourt,
+            updateCourtName,
+            assignGroupToCourt,
+            endMatch,
+            deletePlayer,
+            startPromotion,
+            cancelPromotion,
+            executePromotion
+        };
+
+        initialize();
+    });
+    </script>
+</body>
+</html>
+
